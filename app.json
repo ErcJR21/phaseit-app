@@ -1,0 +1,64 @@
+{
+  "expo": {
+    "name": "PhaseItApp",
+    "slug": "PhaseItApp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Allow PhaseIt to access your location to find food spots near campus."
+      }
+    },
+    "android": {
+      "package": "com.ericjr21.phaseit",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyA_34UZ5hAT5wOnlw7aYaODZ3OAfmvsg6c"
+        }
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow PhaseIt to access your camera to photograph meals."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow PhaseIt to access your location to find food spots near campus."
+        }
+      ],
+      [
+        "react-native-maps",
+        {
+          "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY_HERE"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "d1806edf-9511-4c9c-87c6-58604566a1a1"
+      }
+    },
+    "owner": "ercjr21"
+  }
+}
