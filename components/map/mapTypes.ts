@@ -14,12 +14,21 @@ export type MapCoordinate = {
 
 export type FoodMapLayerRef = {
   animateToRegion: (region: MapRegion, duration?: number) => void;
+  focusOnCoordinate: (coordinate: MapCoordinate, insets: MapInsets) => void;
+};
+
+export type MapInsets = {
+  top: number;
+  right?: number;
+  bottom: number;
+  left?: number;
 };
 
 export type FoodMapLayerProps = {
   initialRegion: MapRegion;
   userLocation: MapCoordinate;
   vendors: Vendor[];
-  selectedVendorId: string;
-  onSelectVendor: (vendorId: string) => void;
+  selectedStallId: string | null;
+  onSelectStall: (stall: Vendor) => void;
+  mapInsets?: MapInsets;
 };

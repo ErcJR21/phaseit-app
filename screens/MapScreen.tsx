@@ -1,20 +1,27 @@
-import { createElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import * as Linking from 'expo-linking';
 import { ChevronLeft, MapPin, Plus } from 'lucide-react-native';
 import { AddCanteenModal } from '../components/map/AddCanteenModal';
+import {
+  FOOD_MAP_SHEET_COLLAPSED_BODY_HEIGHT,
+  FOOD_MAP_SHEET_EXPANDED_HEIGHT,
+  FOOD_MAP_SHEET_HANDLE_HEIGHT,
+  FoodMapBottomSheet,
+  type FoodMapSheetSnap,
+} from '../components/map/FoodMapBottomSheet';
 import FoodMapLayer from '../components/map/FoodMapLayer';
-import type { FoodMapLayerRef } from '../components/map/mapTypes';
+import type { FoodMapLayerRef, MapInsets } from '../components/map/mapTypes';
 import { MapSearchBar } from '../components/map/MapSearchBar';
 import { VendorDetailSheet } from '../components/map/VendorDetailSheet';
 import {
@@ -23,6 +30,7 @@ import {
   type Restaurant,
 } from '../data/restaurants';
 import { CAMPUS_CENTER } from '../data/vendors';
+import type { Vendor } from '../data/vendors';
 import {
   canteenRowToVendor,
   fetchCanteens,
@@ -39,33 +47,6 @@ type MapScreenProps = {
 };
 
 const isNativeMobile = Platform.OS === 'ios' || Platform.OS === 'android';
-
-const MAPUA_MAKATI_MAP_EMBED_URL =
-  'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3861.642738981442!2d121.00693527588145!3d14.561560085906232!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3397c962b71a0675%3A0x63390c57650f0003!2sMap%C3%BAa%20University%20Makati!5e0!3m2!1sen!2sph!4v1718360000000!5m2!1sen!2sph';
-
-function WebMapArea() {
-  if (Platform.OS !== 'web') {
-    return null;
-  }
-
-  return (
-    <View style={styles.webMapContainer}>
-      {createElement('iframe', {
-        src: MAPUA_MAKATI_MAP_EMBED_URL,
-        title: 'Mapúa University Makati',
-        loading: 'lazy',
-        referrerPolicy: 'no-referrer-when-downgrade',
-        allowFullScreen: true,
-        style: {
-          border: 0,
-          width: '100%',
-          height: 400,
-          display: 'block',
-        },
-      })}
-    </View>
-  );
-}
 
 type LocationPermissionState = 'idle' | 'requesting' | 'ready';
 
@@ -115,6 +96,9 @@ const FILTER_OPTIONS = [
   { key: 'high-fiber', label: 'High Fiber' },
 ] as const;
 
+const FLOATING_HEADER_HEIGHT = 56;
+const FLOATING_SEARCH_HEIGHT = 120;
+
 function restaurantMatchesFilter(restaurant: Restaurant, filter: string): boolean {
   if (filter === 'openNow') {
     return restaurant.isOpen;
@@ -140,12 +124,17 @@ async function handleGetDirections(latitude: number, longitude: number): Promise
 
 export default function MapScreen({ onClose, onLogMeal }: MapScreenProps) {
   const mapRef = useRef<FoodMapLayerRef | null>(null);
+  const safeInsets = useSafeAreaInsets();
+  const initialCollapsedHeight =
+    FOOD_MAP_SHEET_COLLAPSED_BODY_HEIGHT +
+    FOOD_MAP_SHEET_HANDLE_HEIGHT +
+    Math.max(safeInsets.bottom, spacing.sm);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [restaurants, setRestaurants] = useState<Restaurant[]>(INITIAL_RESTAURANTS);
-  const [selectedVendorId, setSelectedVendorId] = useState<string>(
-    INITIAL_RESTAURANTS[0].id,
-  );
+  const [selectedStall, setSelectedStall] = useState<Vendor | null>(null);
+  const [sheetSnap, setSheetSnap] = useState<FoodMapSheetSnap>('collapsed');
+  const [sheetHeight, setSheetHeight] = useState(initialCollapsedHeight);
   const [loadingVendors, setLoadingVendors] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -170,18 +159,12 @@ export default function MapScreen({ onClose, onLogMeal }: MapScreenProps) {
           : rows.map((row) => vendorToRestaurant(canteenRowToVendor(row)));
 
       setRestaurants(base);
-      setSelectedVendorId(base[0]?.id ?? INITIAL_RESTAURANTS[0].id);
     } catch {
       setLoadError('Using offline campus pins — live database unavailable.');
       setRestaurants(INITIAL_RESTAURANTS);
-      setSelectedVendorId(INITIAL_RESTAURANTS[0].id);
     } finally {
       setLoadingVendors(false);
     }
-  }, []);
-
-  useEffect(() => {
-    console.log('[MapScreen] Platform.OS:', Platform.OS);
   }, []);
 
   useEffect(() => {
@@ -223,17 +206,20 @@ export default function MapScreen({ onClose, onLogMeal }: MapScreenProps) {
     [filteredRestaurants, userLocation],
   );
 
-  const selectedVendor =
-    filteredVendors.find((vendor) => vendor.id === selectedVendorId) ??
-    filteredVendors[0] ??
-    (restaurants[0] ? withVendorDistance(restaurantToVendor(restaurants[0]), userLocation) : undefined);
-
   useEffect(() => {
-    if (!selectedVendor) return;
-    if (!filteredVendors.some((vendor) => vendor.id === selectedVendorId)) {
-      setSelectedVendorId(filteredVendors[0]?.id ?? restaurants[0]?.id);
+    if (filteredVendors.length === 0) {
+      setSelectedStall(null);
+      return;
     }
-  }, [filteredVendors, selectedVendorId, selectedVendor, restaurants]);
+
+    setSelectedStall((current) => {
+      if (current) {
+        const refreshed = filteredVendors.find((vendor) => vendor.id === current.id);
+        if (refreshed) return refreshed;
+      }
+      return filteredVendors[0];
+    });
+  }, [filteredVendors]);
 
   useEffect(() => {
     if (!isNativeMobile) return;
@@ -269,22 +255,60 @@ export default function MapScreen({ onClose, onLogMeal }: MapScreenProps) {
     };
   }, []);
 
-  const handleSelectVendor = (vendorId: string) => {
-    setSelectedVendorId(vendorId);
-    const restaurant = restaurants.find((item) => item.id === vendorId);
-    if (!restaurant || !mapRef.current) return;
+  const mapInsets = useMemo<MapInsets>(
+    () => ({
+      top: FLOATING_HEADER_HEIGHT + FLOATING_SEARCH_HEIGHT,
+      bottom:
+        (sheetSnap === 'expanded' ? FOOD_MAP_SHEET_EXPANDED_HEIGHT : sheetHeight) +
+        spacing.md,
+      left: 16,
+      right: 16,
+    }),
+    [sheetSnap, sheetHeight],
+  );
 
-    const vendor = restaurantToVendor(restaurant);
+  const focusStall = useCallback(
+    (stall: Vendor, snap: FoodMapSheetSnap = sheetSnap) => {
+      if (!mapRef.current) return;
 
-    mapRef.current.animateToRegion(
-      {
-        ...vendor.coordinate,
-        latitudeDelta: 0.006,
-        longitudeDelta: 0.006,
-      },
-      350,
-    );
-  };
+      const bottomInset =
+        (snap === 'expanded' ? FOOD_MAP_SHEET_EXPANDED_HEIGHT : sheetHeight) + spacing.md;
+
+      mapRef.current.focusOnCoordinate(stall.coordinate, {
+        top: FLOATING_HEADER_HEIGHT + FLOATING_SEARCH_HEIGHT,
+        bottom: bottomInset,
+        left: 16,
+        right: 16,
+      });
+    },
+    [sheetHeight, sheetSnap],
+  );
+
+  const selectStall = useCallback((stall: Vendor, expandSheet = true) => {
+    setSelectedStall(stall);
+    if (expandSheet) {
+      setSheetSnap('expanded');
+    }
+  }, []);
+
+  const handleSheetSnapChange = useCallback(
+    (snap: FoodMapSheetSnap) => {
+      setSheetSnap(snap);
+      if (snap === 'collapsed' && selectedStall) {
+        setTimeout(() => focusStall(selectedStall, 'collapsed'), 80);
+      }
+    },
+    [selectedStall, focusStall],
+  );
+
+  useEffect(() => {
+    if (!selectedStall) return;
+
+    const focusDelay = sheetSnap === 'expanded' ? 120 : 0;
+    const timer = setTimeout(() => focusStall(selectedStall, sheetSnap), focusDelay);
+
+    return () => clearTimeout(timer);
+  }, [selectedStall, sheetSnap, focusStall]);
 
   const handleSubmitCanteen = async (input: InsertCanteenInput) => {
     setSubmittingPin(true);
@@ -292,20 +316,11 @@ export default function MapScreen({ onClose, onLogMeal }: MapScreenProps) {
     try {
       const row = await insertCanteen(input);
       const newRestaurant = vendorToRestaurant(canteenRowToVendor(row));
-      const newVendor = withVendorDistance(canteenRowToVendor(row), userLocation);
+      const newStall = withVendorDistance(canteenRowToVendor(row), userLocation);
 
       setRestaurants((current) => [newRestaurant, ...current]);
-      setSelectedVendorId(newRestaurant.id);
+      selectStall(newStall);
       setLoadError(null);
-
-      mapRef.current?.animateToRegion(
-        {
-          ...newVendor.coordinate,
-          latitudeDelta: 0.006,
-          longitudeDelta: 0.006,
-        },
-        350,
-      );
     } finally {
       setSubmittingPin(false);
     }
@@ -316,7 +331,8 @@ export default function MapScreen({ onClose, onLogMeal }: MapScreenProps) {
   };
 
   const renderRestaurantCard = (restaurant: Restaurant) => {
-    const selected = restaurant.id === selectedVendorId;
+    const stall = filteredVendors.find((vendor) => vendor.id === restaurant.id);
+    const selected = stall?.id === selectedStall?.id;
     const { latitude, longitude } = restaurantToVendor(restaurant).coordinate;
 
     return (
@@ -325,7 +341,7 @@ export default function MapScreen({ onClose, onLogMeal }: MapScreenProps) {
         style={[styles.restaurantCard, selected && styles.restaurantCardSelected]}
       >
         <Pressable
-          onPress={() => handleSelectVendor(restaurant.id)}
+          onPress={() => stall && selectStall(stall)}
           accessibilityRole="button"
           accessibilityState={{ selected }}
           accessibilityLabel={`${restaurant.name}, ₱${restaurant.price}, ${restaurant.isOpen ? 'open' : 'closed'}`}
@@ -363,19 +379,26 @@ export default function MapScreen({ onClose, onLogMeal }: MapScreenProps) {
     );
   };
 
-  const renderRestaurantList = () => {
-    if (filteredRestaurants.length === 0) {
-      return (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyStateText}>No restaurants found matching your criteria.</Text>
-        </View>
-      );
-    }
+  const collapsedSheetContent =
+    filteredRestaurants.length === 0 ? (
+      <View style={styles.emptyState}>
+        <Text style={styles.emptyStateText}>No restaurants found matching your criteria.</Text>
+      </View>
+    ) : (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.resultsStripContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        {filteredRestaurants.map(renderRestaurantCard)}
+      </ScrollView>
+    );
 
-    return filteredRestaurants.map(renderRestaurantCard);
-  };
+  const showMapLayer =
+    Platform.OS === 'web' || (isNativeMobile && locationPermission === 'ready');
 
-  if (!selectedVendor) {
+  if (loadingVendors || !selectedStall) {
     return (
       <View style={styles.loadingScreen}>
         <ActivityIndicator size="large" color={colors.green} />
@@ -385,17 +408,16 @@ export default function MapScreen({ onClose, onLogMeal }: MapScreenProps) {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.mapContainer}>
-        {Platform.OS === 'web' ? (
-          <WebMapArea />
-        ) : isNativeMobile && locationPermission === 'ready' ? (
+      <View style={styles.workspace}>
+        {showMapLayer ? (
           <FoodMapLayer
             ref={mapRef}
             initialRegion={initialRegion}
             userLocation={userLocation}
             vendors={filteredVendors}
-            selectedVendorId={selectedVendor.id}
-            onSelectVendor={handleSelectVendor}
+            selectedStallId={selectedStall.id}
+            onSelectStall={selectStall}
+            mapInsets={mapInsets}
           />
         ) : isNativeMobile ? (
           <View style={styles.mapPermissionGate}>
@@ -403,98 +425,92 @@ export default function MapScreen({ onClose, onLogMeal }: MapScreenProps) {
             <Text style={styles.mapPermissionText}>Requesting location access…</Text>
           </View>
         ) : null}
-      </View>
 
-      <SafeAreaView style={styles.overlay} pointerEvents="box-none">
-        <View style={styles.topBar}>
-          <Pressable
-            style={styles.backButton}
-            onPress={onClose}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-          >
-            <ChevronLeft size={22} color={colors.navy} strokeWidth={2.5} />
-          </Pressable>
-          <View style={styles.titleBlock}>
-            <Text style={styles.screenTitle}>Food Map</Text>
-            <Text style={styles.screenSubtitle}>
-              {loadingVendors
-                ? 'Loading live pins…'
-                : `${filteredRestaurants.length} student-sourced spots`}
-            </Text>
-          </View>
-          <Pressable
-            style={styles.addPinButton}
-            accessibilityRole="button"
-            accessibilityLabel="Drop a new pin"
-            onPress={() => setShowAddModal(true)}
-          >
-            <Plus size={22} color={colors.white} strokeWidth={2.5} />
-          </Pressable>
-        </View>
-
-        <View style={styles.searchBlock}>
-          <MapSearchBar value={searchQuery} onChangeText={setSearchQuery} />
-          {loadError && <Text style={styles.loadError}>{loadError}</Text>}
-          <View style={styles.filterBlock}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterRow}
+        {/* Transparent top overlay — does not cover the full screen */}
+        <View
+          style={[styles.floatingOverlay, { paddingTop: safeInsets.top }]}
+        >
+          <View style={styles.topBar}>
+            <Pressable
+              style={styles.backButton}
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
             >
-              {FILTER_OPTIONS.map((filter) => {
-                const active = activeFilters.includes(filter.key);
+              <ChevronLeft size={22} color={colors.navy} strokeWidth={2.5} />
+            </Pressable>
+            <View style={styles.titleBlock}>
+              <Text style={styles.screenTitle}>Food Map</Text>
+              <Text style={styles.screenSubtitle}>
+                {loadingVendors
+                  ? 'Loading live pins…'
+                  : `${filteredRestaurants.length} student-sourced spots`}
+              </Text>
+            </View>
+            <Pressable
+              style={styles.addPinButton}
+              accessibilityRole="button"
+              accessibilityLabel="Drop a new pin"
+              onPress={() => setShowAddModal(true)}
+            >
+              <Plus size={22} color={colors.white} strokeWidth={2.5} />
+            </Pressable>
+          </View>
 
-                return (
-                  <Pressable
-                    key={filter.key}
-                    style={[styles.filterPill, active ? styles.filterPillActive : styles.filterPillInactive]}
-                    onPress={() => toggleFilter(filter.key)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: active }}
-                    accessibilityLabel={`${active ? 'Remove' : 'Apply'} ${filter.label} filter`}
-                  >
-                    <Text
-                      style={[
-                        styles.filterPillLabel,
-                        active ? styles.filterPillLabelActive : styles.filterPillLabelInactive,
-                      ]}
+          <View style={styles.searchBlock}>
+            <MapSearchBar value={searchQuery} onChangeText={setSearchQuery} />
+            {loadError && <Text style={styles.loadError}>{loadError}</Text>}
+            <View style={styles.filterBlock}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterRow}
+              >
+                {FILTER_OPTIONS.map((filter) => {
+                  const active = activeFilters.includes(filter.key);
+
+                  return (
+                    <Pressable
+                      key={filter.key}
+                      style={[styles.filterPill, active ? styles.filterPillActive : styles.filterPillInactive]}
+                      onPress={() => toggleFilter(filter.key)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                      accessibilityLabel={`${active ? 'Remove' : 'Apply'} ${filter.label} filter`}
                     >
-                      {filter.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-            <View style={styles.filterCountBadge}>
-              <Text style={styles.filterCountText}>{filteredRestaurants.length} spots</Text>
+                      <Text
+                        style={[
+                          styles.filterPillLabel,
+                          active ? styles.filterPillLabelActive : styles.filterPillLabelInactive,
+                        ]}
+                      >
+                        {filter.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+              <View style={styles.filterCountBadge}>
+                <Text style={styles.filterCountText}>{filteredRestaurants.length} spots</Text>
+              </View>
             </View>
           </View>
         </View>
-      </SafeAreaView>
 
-      <View
-        style={[
-          styles.resultsStrip,
-          filteredRestaurants.length === 0 && styles.resultsStripEmpty,
-        ]}
-      >
-        {filteredRestaurants.length === 0 ? (
-          renderRestaurantList()
-        ) : (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.resultsStripContent}
-            keyboardShouldPersistTaps="handled"
-          >
-            {renderRestaurantList()}
-          </ScrollView>
-        )}
-      </View>
-
-      <View style={styles.bottomSheet}>
-        <VendorDetailSheet vendor={selectedVendor} onLogMeal={onLogMeal} />
+        <FoodMapBottomSheet
+          snap={sheetSnap}
+          onSnapChange={handleSheetSnapChange}
+          onHeightChange={setSheetHeight}
+          collapsedContent={collapsedSheetContent}
+          expandedContent={
+            <VendorDetailSheet
+              key={selectedStall.id}
+              vendor={selectedStall}
+              onLogMeal={onLogMeal}
+              embedded
+            />
+          }
+        />
       </View>
 
       <AddCanteenModal
@@ -512,18 +528,17 @@ export default function MapScreen({ onClose, onLogMeal }: MapScreenProps) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+    width: '100%',
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web'
+      ? ({ height: '100%', minHeight: '100%' } as const)
+      : null),
   },
-  mapContainer: {
+  workspace: {
     flex: 1,
+    position: 'relative',
     width: '100%',
-  },
-  webMapContainer: {
-    width: '100%',
-    height: 400,
-    backgroundColor: colors.backgroundMuted,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.track,
+    minHeight: 0,
     overflow: 'hidden',
   },
   emptyState: {
@@ -539,21 +554,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: 280,
   },
-  resultsStrip: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: '48%',
-    paddingHorizontal: layout.screenPaddingX,
-  },
-  resultsStripEmpty: {
-    top: 160,
-    bottom: '48%',
-    justifyContent: 'center',
-  },
   resultsStripContent: {
     gap: spacing.sm,
-    paddingRight: layout.screenPaddingX,
+    paddingHorizontal: layout.screenPaddingX,
+    paddingRight: layout.screenPaddingX * 2,
   },
   restaurantCard: {
     width: 220,
@@ -628,8 +632,8 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   mapPermissionGate: {
-    flex: 1,
-    width: '100%',
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.backgroundMuted,
@@ -646,13 +650,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.background,
   },
-  overlay: {
+  floatingOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
+    zIndex: 5,
     paddingHorizontal: layout.screenPaddingX,
     gap: spacing.md,
+    backgroundColor: 'transparent',
+    pointerEvents: 'box-none',
   },
   topBar: {
     flexDirection: 'row',
@@ -671,6 +678,11 @@ const styles = StyleSheet.create({
   },
   titleBlock: {
     flex: 1,
+    backgroundColor: colors.white,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    ...shadows.card,
   },
   screenTitle: {
     fontSize: 18,
@@ -694,6 +706,12 @@ const styles = StyleSheet.create({
   },
   searchBlock: {
     gap: spacing.md,
+    backgroundColor: colors.background,
+    borderRadius: radii.xl,
+    padding: spacing.sm,
+    ...shadows.card,
+    shadowOpacity: 0.1,
+    shadowRadius: 14,
   },
   filterBlock: {
     gap: spacing.sm,
@@ -739,11 +757,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: colors.coral,
-  },
-  bottomSheet: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
   },
 });

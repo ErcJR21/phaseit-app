@@ -1,27 +1,58 @@
 import { createElement, forwardRef, useImperativeHandle, useMemo, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, shadows } from '../../theme/colors';
 import { layout, radii, spacing } from '../../theme/spacing';
-import type { MapCoordinate, MapRegion } from './mapTypes';
+import type { MapCoordinate, MapInsets, MapRegion } from './mapTypes';
 import type { FoodMapLayerProps, FoodMapLayerRef } from './mapTypes';
 import { PricePillMarker } from './PricePillMarker';
 
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+const FOCUS_DELTA = 0.006;
+
+function centerForVisibleMap(
+  coordinate: MapCoordinate,
+  insets: MapInsets,
+): MapRegion {
+  const top = insets.top;
+  const bottom = insets.bottom;
+  const visibleCenterY = top + (SCREEN_HEIGHT - top - bottom) / 2;
+  const offsetFraction = visibleCenterY / SCREEN_HEIGHT - 0.5;
+  const latShift = FOCUS_DELTA * offsetFraction * 1.15;
+
+  return {
+    latitude: coordinate.latitude - latShift,
+    longitude: coordinate.longitude,
+    latitudeDelta: FOCUS_DELTA,
+    longitudeDelta: FOCUS_DELTA,
+  };
+}
+
 const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+const useEmbedApi = process.env.EXPO_PUBLIC_GOOGLE_MAPS_USE_EMBED_API === 'true';
 
 function latitudeDeltaToZoom(latitudeDelta: number): number {
   const zoom = Math.round(Math.log2(360 / latitudeDelta));
   return Math.min(Math.max(zoom, 13), 17);
 }
 
+/**
+ * Web uses an iframe embed — not react-native-maps MapView.
+ * embed/v1/view requires the separate "Maps Embed API" enabled in Google Cloud;
+ * billing on Maps SDK for Android/iOS does not cover it (403 otherwise).
+ */
 function buildMapEmbedUrl(center: MapCoordinate, latitudeDelta: number): string {
   const zoom = latitudeDeltaToZoom(latitudeDelta);
   const { latitude, longitude } = center;
 
-  if (googleMapsApiKey && googleMapsApiKey !== 'YOUR_GOOGLE_MAPS_API_KEY_HERE') {
+  const hasApiKey = Boolean(
+    googleMapsApiKey && googleMapsApiKey !== 'YOUR_GOOGLE_MAPS_API_KEY_HERE',
+  );
+
+  if (hasApiKey && useEmbedApi) {
     return `https://www.google.com/maps/embed/v1/view?key=${googleMapsApiKey}&center=${latitude},${longitude}&zoom=${zoom}&maptype=roadmap`;
   }
 
-  return `https://maps.google.com/maps?q=${latitude},${longitude}&hl=en&z=${zoom}&output=embed`;
+  return `https://www.google.com/maps?q=${latitude},${longitude}&hl=en&z=${zoom}&output=embed`;
 }
 
 function coordinateToOverlayPosition(
@@ -75,7 +106,7 @@ function UserLocationDot() {
 }
 
 const FoodMapLayer = forwardRef<FoodMapLayerRef, FoodMapLayerProps>(function FoodMapLayer(
-  { initialRegion, userLocation, vendors, selectedVendorId, onSelectVendor },
+  { initialRegion, userLocation, vendors, selectedStallId, onSelectStall },
   ref,
 ) {
   const [region, setRegion] = useState<MapRegion>(initialRegion);
@@ -83,6 +114,9 @@ const FoodMapLayer = forwardRef<FoodMapLayerRef, FoodMapLayerProps>(function Foo
   useImperativeHandle(ref, () => ({
     animateToRegion: (nextRegion) => {
       setRegion(nextRegion);
+    },
+    focusOnCoordinate: (coordinate, insets) => {
+      setRegion(centerForVisibleMap(coordinate, insets));
     },
   }));
 
@@ -102,13 +136,12 @@ const FoodMapLayer = forwardRef<FoodMapLayerRef, FoodMapLayerProps>(function Foo
         <WebMapFrame src={mapSrc} title="Campus Food Map" />
       </View>
 
-      <View style={styles.overlayLayer} pointerEvents="box-none">
+      <View style={styles.overlayLayer}>
         <View
           style={[
             styles.userMarker,
             { left: userPosition.left, top: userPosition.top },
           ]}
-          pointerEvents="none"
         >
           <UserLocationDot />
         </View>
@@ -123,19 +156,19 @@ const FoodMapLayer = forwardRef<FoodMapLayerRef, FoodMapLayerProps>(function Foo
                 styles.vendorMarker,
                 { left: position.left, top: position.top },
               ]}
-              onPress={() => onSelectVendor(vendor.id)}
+              onPress={() => onSelectStall(vendor)}
               accessibilityLabel={`${vendor.name}, ₱${vendor.startingPrice}`}
             >
               <PricePillMarker
                 vendor={vendor}
-                selected={vendor.id === selectedVendorId}
+                selected={vendor.id === selectedStallId}
               />
             </Pressable>
           );
         })}
       </View>
 
-      <View style={styles.mapBadge} pointerEvents="none">
+      <View style={styles.mapBadge}>
         <Text style={styles.mapBadgeText}>UP Diliman Campus · {vendors.length} pins</Text>
       </View>
     </View>
@@ -148,32 +181,22 @@ export type { FoodMapLayerRef, FoodMapLayerProps };
 
 const styles = StyleSheet.create({
   mapShell: {
-    flex: 1,
-    width: '100%',
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1,
     backgroundColor: colors.backgroundMuted,
-    paddingTop: 150,
-    paddingBottom: 260,
-    paddingHorizontal: layout.screenPaddingX,
   },
   mapFrame: {
-    flex: 1,
-    width: '100%',
-    borderRadius: radii.xl,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.track,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.white,
-    ...shadows.card,
   },
   overlayLayer: {
     ...StyleSheet.absoluteFillObject,
-    marginTop: 150,
-    marginBottom: 260,
-    marginHorizontal: layout.screenPaddingX,
+    pointerEvents: 'box-none',
   },
   userMarker: {
     position: 'absolute',
     transform: [{ translateX: -14 }, { translateY: -14 }],
+    pointerEvents: 'none',
   },
   vendorMarker: {
     position: 'absolute',
@@ -182,12 +205,13 @@ const styles = StyleSheet.create({
   },
   mapBadge: {
     position: 'absolute',
-    top: 162,
+    top: 188,
     left: layout.screenPaddingX + spacing.md,
     backgroundColor: colors.white,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
+    pointerEvents: 'none',
     ...shadows.card,
   },
   mapBadgeText: {

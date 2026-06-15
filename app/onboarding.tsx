@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Eye, EyeOff, Apple } from 'lucide-react-native';
 import { PhaseEatLogo } from '../components/PhaseEatLogo';
 import { supabase } from '../lib/supabase';
+import { signInAsGuest } from '../services/guestAuthService';
 import { colors, shadows } from '../theme/colors';
 import { layout, radii, sizes, spacing } from '../theme/spacing';
 import { fontWeights } from '../theme/typography';
@@ -130,10 +131,33 @@ export default function OnboardingScreen() {
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
+    console.log('[PhaseEat:Login] Starting email/password sign-in…');
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: trimmedEmail,
       password: loginPassword,
     });
+    setLoading(false);
+
+    if (error) {
+      console.error('[PhaseEat:Login] Sign-in failed:', error.message);
+      showAuthError(error.message);
+      return;
+    }
+
+    console.log('[PhaseEat:Login] Sign-in succeeded', {
+      userId: data.session?.user?.id,
+      isAnonymous: data.session?.user?.is_anonymous,
+    });
+
+    router.replace('/');
+  };
+
+  const handleGuestLogin = async () => {
+    setLoading(true);
+    console.log('[PhaseEat:Login] Guest login tapped');
+
+    const { session, error } = await signInAsGuest();
+
     setLoading(false);
 
     if (error) {
@@ -141,7 +165,10 @@ export default function OnboardingScreen() {
       return;
     }
 
-    router.replace('/');
+    console.log('[PhaseEat:Login] Guest login complete — session is active', {
+      userId: session?.user?.id,
+      isAnonymous: session?.user?.is_anonymous,
+    });
   };
 
   const handlePrimaryAction = () => {
@@ -417,6 +444,20 @@ export default function OnboardingScreen() {
                     ) : (
                       <Text style={styles.primaryCtaLabel}>Log In</Text>
                     )}
+                  </Pressable>
+
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.guestCta,
+                      pressed && styles.buttonPressed,
+                      loading && styles.buttonDisabled,
+                    ]}
+                    onPress={() => void handleGuestLogin()}
+                    disabled={loading}
+                    accessibilityRole="button"
+                    accessibilityLabel="Login as Guest"
+                  >
+                    <Text style={styles.guestCtaLabel}>Login as Guest</Text>
                   </Pressable>
                 </View>
               )}
@@ -767,6 +808,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 24,
     elevation: 4,
+  },
+  guestCta: {
+    marginTop: spacing.sm,
+    borderRadius: radii.md,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: tokens.grayPale,
+    backgroundColor: tokens.creamBg,
+  },
+  guestCtaLabel: {
+    fontSize: 14,
+    fontWeight: fontWeights.semibold,
+    color: tokens.navyDark,
+    letterSpacing: 0.1,
   },
   primaryCtaLabel: {
     fontSize: 16,

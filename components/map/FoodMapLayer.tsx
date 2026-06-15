@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, useImperativeHandle } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '../../theme/colors';
 import { layout, spacing } from '../../theme/spacing';
@@ -6,8 +6,13 @@ import type { FoodMapLayerProps, FoodMapLayerRef } from './mapTypes';
 
 const FoodMapLayer = forwardRef<FoodMapLayerRef, FoodMapLayerProps>(function FoodMapLayer(
   _props,
-  _ref,
+  ref,
 ) {
+  useImperativeHandle(ref, () => ({
+    animateToRegion: () => {},
+    focusOnCoordinate: () => {},
+  }));
+
   return (
     <View style={styles.placeholder}>
       <View style={styles.placeholderBox} />
@@ -22,8 +27,8 @@ export type { FoodMapLayerRef, FoodMapLayerProps };
 
 const styles = StyleSheet.create({
   placeholder: {
-    flex: 1,
-    width: '100%',
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.backgroundMuted,

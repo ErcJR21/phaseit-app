@@ -1,9 +1,30 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
-import { Animated, Platform, StyleSheet, View } from 'react-native';
+import { Animated, Dimensions, StyleSheet, View } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { PricePillMarker } from './PricePillMarker';
 import { colors } from '../../theme/colors';
-import type { FoodMapLayerProps, FoodMapLayerRef } from './mapTypes';
+import type { FoodMapLayerProps, FoodMapLayerRef, MapCoordinate, MapInsets } from './mapTypes';
+
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+const FOCUS_DELTA = 0.006;
+
+function centerForVisibleMap(
+  coordinate: MapCoordinate,
+  insets: MapInsets,
+): MapCoordinate & { latitudeDelta: number; longitudeDelta: number } {
+  const top = insets.top;
+  const bottom = insets.bottom;
+  const visibleCenterY = top + (SCREEN_HEIGHT - top - bottom) / 2;
+  const offsetFraction = visibleCenterY / SCREEN_HEIGHT - 0.5;
+  const latShift = FOCUS_DELTA * offsetFraction * 1.15;
+
+  return {
+    latitude: coordinate.latitude - latShift,
+    longitude: coordinate.longitude,
+    latitudeDelta: FOCUS_DELTA,
+    longitudeDelta: FOCUS_DELTA,
+  };
+}
 
 function UserLocationDot() {
   const pulse = useRef(new Animated.Value(0)).current;
@@ -53,53 +74,70 @@ function UserLocationDot() {
 }
 
 const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
-const mapProvider =
-  Platform.OS === 'android' || (Platform.OS === 'ios' && googleMapsApiKey)
-    ? PROVIDER_GOOGLE
-    : undefined;
+const hasGoogleMapsApiKey = Boolean(
+  googleMapsApiKey && googleMapsApiKey !== 'YOUR_GOOGLE_MAPS_API_KEY_HERE',
+);
 
 const FoodMapLayer = forwardRef<FoodMapLayerRef, FoodMapLayerProps>(function FoodMapLayer(
-  { initialRegion, userLocation, vendors, selectedVendorId, onSelectVendor },
+  { initialRegion, userLocation, vendors, selectedStallId, onSelectStall, mapInsets },
   ref,
 ) {
   const mapRef = useRef<MapView | null>(null);
+  const padding = {
+    top: mapInsets?.top ?? 160,
+    right: mapInsets?.right ?? 16,
+    bottom: mapInsets?.bottom ?? 220,
+    left: mapInsets?.left ?? 16,
+  };
 
   useImperativeHandle(ref, () => ({
     animateToRegion: (region, duration = 350) => {
       mapRef.current?.animateToRegion(region, duration);
     },
+    focusOnCoordinate: (coordinate, insets) => {
+      mapRef.current?.animateToRegion(centerForVisibleMap(coordinate, insets), 350);
+    },
   }));
 
-  return (
-    <MapView
-      ref={mapRef}
-      style={styles.map}
-      provider={mapProvider}
-      initialRegion={initialRegion}
-      showsUserLocation={false}
-      showsMyLocationButton={false}
-      showsCompass={false}
-      toolbarEnabled={false}
-      mapPadding={{ top: 160, right: 16, bottom: 280, left: 16 }}
-    >
-      <Marker coordinate={userLocation} anchor={{ x: 0.5, y: 0.5 }}>
-        <UserLocationDot />
-      </Marker>
+  const handleMapReady = () => {
+    if (__DEV__) {
+      console.log('[FoodMapLayer.native] Map is ready!', { hasGoogleMapsApiKey });
+    }
+  };
 
-      {vendors.map((vendor) => (
-        <Marker
-          key={vendor.id}
-          coordinate={vendor.coordinate}
-          onPress={() => onSelectVendor(vendor.id)}
+  return (
+    <View style={styles.mapHost}>
+      <MapView
+        ref={mapRef}
+        style={styles.map}
+        provider={PROVIDER_GOOGLE}
+        initialRegion={initialRegion}
+        showsUserLocation={false}
+        showsMyLocationButton={false}
+        showsCompass={false}
+        toolbarEnabled={false}
+        mapPadding={padding}
+        onMapReady={handleMapReady}
+      >
+        <Marker coordinate={userLocation} anchor={{ x: 0.5, y: 0.5 }}>
+          <UserLocationDot />
+        </Marker>
+
+        {vendors.map((vendor) => (
+          <Marker
+            key={vendor.id}
+            coordinate={vendor.coordinate}
+          onPress={() => onSelectStall(vendor)}
           anchor={{ x: 0.5, y: 1 }}
         >
           <PricePillMarker
             vendor={vendor}
-            selected={vendor.id === selectedVendorId}
+            selected={vendor.id === selectedStallId}
           />
-        </Marker>
-      ))}
-    </MapView>
+          </Marker>
+        ))}
+      </MapView>
+    </View>
   );
 });
 
@@ -108,9 +146,12 @@ export default FoodMapLayer;
 export type { FoodMapLayerRef, FoodMapLayerProps };
 
 const styles = StyleSheet.create({
+  mapHost: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1,
+  },
   map: {
-    flex: 1,
-    width: '100%',
+    ...StyleSheet.absoluteFillObject,
   },
   userDotWrap: {
     width: 28,

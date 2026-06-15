@@ -9,6 +9,7 @@ import { layout, radii, spacing } from '../../theme/spacing';
 type VendorDetailSheetProps = {
   vendor: Vendor;
   onLogMeal?: () => void;
+  embedded?: boolean;
 };
 
 function buildGoogleMapsUrl(lat: number, lng: number): string {
@@ -36,8 +37,8 @@ const crowdLabels = {
   busy: { emoji: '🔴', label: 'Busy' },
 } as const;
 
-export function VendorDetailSheet({ vendor, onLogMeal }: VendorDetailSheetProps) {
-  const [expanded, setExpanded] = useState(false);
+export function VendorDetailSheet({ vendor, onLogMeal, embedded = false }: VendorDetailSheetProps) {
+  const [menuExpanded, setMenuExpanded] = useState(true);
   const crowd = crowdLabels[vendor.crowdLevel];
 
   const onDirectionsPress = () => {
@@ -46,21 +47,29 @@ export function VendorDetailSheet({ vendor, onLogMeal }: VendorDetailSheetProps)
   };
 
   return (
-    <View style={styles.sheet}>
+    <ScrollView
+      style={styles.sheetScroll}
+      contentContainerStyle={styles.sheetScrollContent}
+      showsVerticalScrollIndicator={false}
+      nestedScrollEnabled
+    >
+      <View style={styles.sheet}>
+        {!embedded && (
           <Pressable
             style={styles.handleRow}
-            onPress={() => setExpanded((value) => !value)}
+            onPress={() => setMenuExpanded((value) => !value)}
             accessibilityRole="button"
-            accessibilityLabel={expanded ? 'Collapse menu' : 'Expand menu'}
+            accessibilityLabel={menuExpanded ? 'Collapse menu' : 'Expand menu'}
           >
-        <View style={styles.handle} />
-        <ChevronUp
-          size={16}
-          color={colors.muted}
-          strokeWidth={2}
-          style={{ transform: [{ rotate: expanded ? '180deg' : '0deg' }] }}
-        />
-      </Pressable>
+            <View style={styles.handle} />
+            <ChevronUp
+              size={16}
+              color={colors.muted}
+              strokeWidth={2}
+              style={{ transform: [{ rotate: menuExpanded ? '180deg' : '0deg' }] }}
+            />
+          </Pressable>
+        )}
 
       <View style={styles.headerRow}>
         <Text style={styles.title} numberOfLines={1}>
@@ -123,8 +132,8 @@ export function VendorDetailSheet({ vendor, onLogMeal }: VendorDetailSheetProps)
         </Text>
       </View>
 
-      {expanded && (
-        <ScrollView style={styles.menuList} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+      {menuExpanded && (
+        <View style={styles.menuList}>
           {vendor.menu.map((item) => (
             <View key={item.name} style={styles.menuRow}>
               <Text style={styles.menuName}>{item.name}</Text>
@@ -134,7 +143,7 @@ export function VendorDetailSheet({ vendor, onLogMeal }: VendorDetailSheetProps)
           <View style={styles.updatePrices}>
             <Text style={styles.updatePricesText}>Update prices</Text>
           </View>
-        </ScrollView>
+        </View>
       )}
 
       <View style={styles.ctaRow}>
@@ -157,21 +166,20 @@ export function VendorDetailSheet({ vendor, onLogMeal }: VendorDetailSheetProps)
           <Text style={styles.logText}>Log with AI Cam</Text>
         </Pressable>
       </View>
-    </View>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  sheet: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: radii.xl,
-    borderTopRightRadius: radii.xl,
-    paddingHorizontal: layout.screenPaddingX,
+  sheetScroll: {
+    flex: 1,
+  },
+  sheetScrollContent: {
     paddingBottom: spacing.lg,
-    maxHeight: '48%',
-    ...shadows.card,
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
+  },
+  sheet: {
+    paddingHorizontal: layout.screenPaddingX,
   },
   handleRow: {
     alignItems: 'center',
@@ -322,7 +330,6 @@ const styles = StyleSheet.create({
   },
   menuList: {
     marginTop: spacing.md,
-    maxHeight: 120,
   },
   menuRow: {
     flexDirection: 'row',
