@@ -164,7 +164,12 @@ function PhaseEatApp() {
       case 'history':
         return <MealHistoryScreen onLogMeal={() => setShowCamera(true)} />;
       case 'profile':
-        return <ProfileScreen onOpenMacroGoals={() => setShowMacroGoals(true)} />;
+        return (
+          <ProfileScreen
+            onOpenMealPlan={() => setShowMealPlan(true)}
+            onOpenJar={() => setShowJar(true)}
+          />
+        );
       default:
         return null;
     }

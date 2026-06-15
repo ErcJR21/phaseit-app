@@ -92,7 +92,7 @@ export const screens: ScreenSpec[] = [
     name: 'Profile',
     status: 'built',
     file: 'screens/ProfileScreen.js',
-    notes: 'Avatar, display name, edit profile, saved/suggestions stats, settings menu. Bottom nav tab.',
+    notes: 'Logo header, profile card with EXP bar, stats row, achievements grid, daily budget card, quick links, meal reminders toggle, parent portal entry, logout CTA.',
   },
   {
     route: '/macro-goals',

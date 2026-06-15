@@ -9,8 +9,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Check, ChevronLeft, Plus, Wallet, X } from 'lucide-react-native';
-import { RecipePickerModal } from '../components/mealPlan/RecipePickerModal';
 import { useAuth } from '../context/AuthContext';
+import { useBudget } from '../context/BudgetContext';
 import {
   addMeal,
   deleteMealPlan,
@@ -34,8 +34,6 @@ const FULL_DAY_LABELS = [
   'Sunday',
 ] as const;
 
-const DAILY_BUDGET = 300;
-
 type MealSlotConfig = {
   type: MealType;
   label: string;
@@ -46,7 +44,7 @@ type MealSlotConfig = {
 const MEAL_SLOTS: MealSlotConfig[] = [
   { type: 'breakfast', label: 'Breakfast', time: '7:00 – 9:00 AM', emoji: '🌅' },
   { type: 'lunch', label: 'Lunch', time: '12:00 – 1:00 PM', emoji: '☀️' },
-  { type: 'snack', label: 'Snack', time: '3:00 – 4:00 PM', emoji: '🫙' },
+  { type: 'snack', label: 'Merienda', time: '3:00 – 4:00 PM', emoji: '🫙' },
   { type: 'dinner', label: 'Dinner', time: '6:00 – 8:00 PM', emoji: '🌙' },
 ];
 
@@ -96,6 +94,7 @@ function rowsToWeekPlan(rows: MealPlanRow[]): Record<DayOfWeek, WeekPlan> {
 
 export default function MealPlanScreen({ onClose }: MealPlanScreenProps) {
   const { session } = useAuth();
+  const { dailyAllowance } = useBudget();
   const userId = session?.user.id;
 
   const [selectedDay, setSelectedDay] = useState<DayOfWeek>(getTodayIndex);
@@ -245,11 +244,6 @@ export default function MealPlanScreen({ onClose }: MealPlanScreenProps) {
     });
   };
 
-  const selectedDayLabel = `${FULL_DAY_LABELS[selectedDay]}, ${weekDates[selectedDay].toLocaleDateString('en-PH', {
-    month: 'short',
-    day: 'numeric',
-  })}`;
-
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       <View style={styles.header}>
@@ -267,11 +261,7 @@ export default function MealPlanScreen({ onClose }: MealPlanScreenProps) {
         </View>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.dayStrip}
-      >
+      <View style={styles.dayStrip}>
         {DAY_LABELS.map((label, index) => {
           const dayIndex = index as DayOfWeek;
           const active = dayIndex === selectedDay;
@@ -281,8 +271,14 @@ export default function MealPlanScreen({ onClose }: MealPlanScreenProps) {
           return (
             <Pressable
               key={label}
-              style={[styles.dayPill, active ? styles.dayPillActive : styles.dayPillInactive]}
-              onPress={() => setSelectedDay(dayIndex)}
+              style={[
+                styles.dayPill,
+                active ? styles.dayPillActive : styles.dayPillInactive,
+              ]}
+              onPress={() => {
+                setSelectedDay(dayIndex);
+                setActiveSlot(null);
+              }}
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
             >
@@ -304,7 +300,7 @@ export default function MealPlanScreen({ onClose }: MealPlanScreenProps) {
             </Pressable>
           );
         })}
-      </ScrollView>
+      </View>
 
       {loading ? (
         <View style={styles.loadingWrap}>
@@ -333,7 +329,7 @@ export default function MealPlanScreen({ onClose }: MealPlanScreenProps) {
           <View
             style={[
               styles.budgetCard,
-              dayTotal > DAILY_BUDGET ? styles.budgetCardOver : styles.budgetCardOnTrack,
+              dayTotal > dailyAllowance ? styles.budgetCardOver : styles.budgetCardOnTrack,
             ]}
           >
             <View>
@@ -342,21 +338,23 @@ export default function MealPlanScreen({ onClose }: MealPlanScreenProps) {
               <Text
                 style={[
                   styles.budgetStatus,
-                  dayTotal > DAILY_BUDGET ? styles.budgetStatusOver : styles.budgetStatusOnTrack,
+                  dayTotal > dailyAllowance
+                    ? styles.budgetStatusOver
+                    : styles.budgetStatusOnTrack,
                 ]}
               >
-                {dayTotal > DAILY_BUDGET
-                  ? `₱${dayTotal - DAILY_BUDGET} over budget!`
-                  : `₱${DAILY_BUDGET - dayTotal} remaining`}
+                {dayTotal > dailyAllowance
+                  ? `₱${dayTotal - dailyAllowance} over budget!`
+                  : `₱${dailyAllowance - dayTotal} remaining`}
               </Text>
             </View>
             <View style={styles.budgetMeta}>
               <Wallet
                 size={24}
-                color={dayTotal > DAILY_BUDGET ? colors.coral : colors.green}
+                color={dayTotal > dailyAllowance ? colors.coral : colors.green}
                 strokeWidth={2}
               />
-              <Text style={styles.budgetLimit}>Budget: ₱{DAILY_BUDGET}</Text>
+              <Text style={styles.budgetLimit}>Budget: ₱{dailyAllowance}</Text>
             </View>
           </View>
 
@@ -418,6 +416,51 @@ export default function MealPlanScreen({ onClose }: MealPlanScreenProps) {
                         </Pressable>
                       </View>
                     </View>
+                  ) : activeSlot === slot.type ? (
+                    <View style={styles.addingSlotWrap}>
+                      {recipesLoading ? (
+                        <View style={styles.addingSlotLoading}>
+                          <ActivityIndicator color={colors.coral} />
+                          <Text style={styles.addingSlotLoadingText}>Loading recipes...</Text>
+                        </View>
+                      ) : recipes.length === 0 ? (
+                        <Text style={styles.addingSlotEmpty}>No recipes available yet.</Text>
+                      ) : (
+                        <View style={styles.suggestionGrid}>
+                          {recipes.map((recipe) => (
+                            <Pressable
+                              key={recipe.id}
+                              style={({ pressed }) => [
+                                styles.suggestionCard,
+                                pressed && styles.suggestionCardPressed,
+                              ]}
+                              onPress={() => handleAddRecipe(recipe)}
+                              disabled={saving}
+                            >
+                              <Text style={styles.suggestionEmoji}>{recipe.emoji}</Text>
+                              <Text style={styles.suggestionName} numberOfLines={2}>
+                                {recipe.name}
+                              </Text>
+                              <Text style={styles.suggestionCost}>₱{recipe.cost}</Text>
+                            </Pressable>
+                          ))}
+                        </View>
+                      )}
+                      <Pressable
+                        onPress={() => setActiveSlot(null)}
+                        disabled={saving}
+                        accessibilityRole="button"
+                        accessibilityLabel="Cancel adding meal"
+                      >
+                        <Text style={styles.cancelLabel}>Cancel</Text>
+                      </Pressable>
+                      {saving && (
+                        <View style={styles.savingRow}>
+                          <ActivityIndicator color={colors.coral} size="small" />
+                          <Text style={styles.savingText}>Saving meal plan...</Text>
+                        </View>
+                      )}
+                    </View>
                   ) : (
                     <Pressable
                       style={styles.addSlotButton}
@@ -437,9 +480,12 @@ export default function MealPlanScreen({ onClose }: MealPlanScreenProps) {
           <View style={styles.weekCard}>
             <View style={styles.weekBars}>
               {weekSummary.map((total, index) => {
-                const pct = Math.min(100, (total / DAILY_BUDGET) * 100);
+                const pct =
+                  dailyAllowance > 0
+                    ? Math.min(100, (total / dailyAllowance) * 100)
+                    : 0;
                 const active = index === selectedDay;
-                const overBudget = total > DAILY_BUDGET;
+                const overBudget = total > dailyAllowance;
 
                 return (
                   <View key={DAY_LABELS[index]} style={styles.weekBarColumn}>
@@ -479,17 +525,6 @@ export default function MealPlanScreen({ onClose }: MealPlanScreenProps) {
           </View>
         </ScrollView>
       )}
-
-      <RecipePickerModal
-        visible={activeSlot !== null}
-        mealType={activeSlot ?? 'breakfast'}
-        mealLabel={selectedDayLabel}
-        recipes={recipes}
-        loading={recipesLoading}
-        saving={saving}
-        onClose={() => setActiveSlot(null)}
-        onSelect={handleAddRecipe}
-      />
     </SafeAreaView>
   );
 }
@@ -531,22 +566,32 @@ const styles = StyleSheet.create({
     color: colors.muted,
   },
   dayStrip: {
+    flexDirection: 'row',
     paddingHorizontal: layout.screenPaddingX,
     gap: 6,
     paddingBottom: spacing.md,
   },
   dayPill: {
-    width: 48,
+    flex: 1,
     alignItems: 'center',
     paddingVertical: 10,
     borderRadius: radii.lg,
-    ...shadows.card,
   },
   dayPillActive: {
     backgroundColor: colors.navy,
+    shadowColor: colors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 4,
   },
   dayPillInactive: {
     backgroundColor: colors.white,
+    shadowColor: colors.navy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   dayPillLabel: {
     fontSize: 10,
@@ -629,8 +674,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(67, 176, 106, 0.2)',
   },
   budgetCardOver: {
-    backgroundColor: 'rgba(255, 122, 102, 0.1)',
-    borderColor: 'rgba(255, 122, 102, 0.2)',
+    backgroundColor: 'rgba(255, 90, 90, 0.1)',
+    borderColor: 'rgba(255, 90, 90, 0.2)',
   },
   budgetDayLabel: {
     fontSize: 12,
@@ -692,7 +737,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    ...shadows.card,
+    shadowColor: colors.navy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   mealCardLogged: {
     borderWidth: 1.5,
@@ -767,6 +816,76 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: colors.muted,
   },
+  addingSlotWrap: {
+    gap: spacing.sm,
+  },
+  addingSlotLoading: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.lg,
+  },
+  addingSlotLoadingText: {
+    fontSize: 13,
+    color: colors.muted,
+  },
+  addingSlotEmpty: {
+    fontSize: 13,
+    color: colors.muted,
+    textAlign: 'center',
+    paddingVertical: spacing.lg,
+  },
+  suggestionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  suggestionCard: {
+    flexGrow: 1,
+    flexShrink: 0,
+    flexBasis: '47%',
+    backgroundColor: colors.white,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    shadowColor: colors.navy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  suggestionCardPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
+  },
+  suggestionEmoji: {
+    fontSize: 18,
+    marginBottom: 4,
+  },
+  suggestionName: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.navy,
+    lineHeight: 14,
+  },
+  suggestionCost: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.green,
+    marginTop: 2,
+  },
+  cancelLabel: {
+    fontSize: 12,
+    color: colors.muted,
+  },
+  savingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  savingText: {
+    fontSize: 12,
+    color: colors.muted,
+  },
   weekTitle: {
     fontSize: 14,
     fontWeight: '700',
@@ -776,7 +895,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: radii.lg,
     padding: spacing.lg,
-    ...shadows.card,
+    shadowColor: colors.navy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   weekBars: {
     flexDirection: 'row',
