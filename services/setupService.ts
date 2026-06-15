@@ -30,12 +30,14 @@ export type PersistUserSetupInput = {
   userId: string;
   profile: UserProfile;
   goals: MacroGoalTargets;
+  dailyAllowance?: number;
 };
 
 export async function persistUserSetup({
   userId,
   profile,
   goals,
+  dailyAllowance = DEFAULT_DAILY_ALLOWANCE,
 }: PersistUserSetupInput): Promise<void> {
   const authenticatedUserId = await resolveAuthenticatedUserId(userId);
   if (!authenticatedUserId) {
@@ -96,13 +98,27 @@ export async function persistUserSetup({
 
     const { error: jarInsertError } = await supabase.from(SUPABASE_TABLES.jar).insert({
       user_id: authenticatedUserId,
-      daily_allowance: DEFAULT_DAILY_ALLOWANCE,
+      daily_allowance: dailyAllowance,
       emergency_fund: DEFAULT_EMERGENCY_FUND,
       updated_at: timestamp,
     });
 
     if (jarInsertError) {
       throwSetupError('persistUserSetup.jar.insert', jarInsertError, SUPABASE_TABLES.jar);
+    }
+  } else {
+    logSupabaseRequest('persistUserSetup.jar.update', {
+      table: SUPABASE_TABLES.jar,
+      userId: authenticatedUserId,
+    });
+
+    const { error: jarUpdateError } = await supabase
+      .from(SUPABASE_TABLES.jar)
+      .update({ daily_allowance: dailyAllowance, updated_at: timestamp })
+      .eq('user_id', authenticatedUserId);
+
+    if (jarUpdateError) {
+      throwSetupError('persistUserSetup.jar.update', jarUpdateError, SUPABASE_TABLES.jar);
     }
   }
 

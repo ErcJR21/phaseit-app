@@ -120,7 +120,7 @@ export default function OnboardingScreen() {
       return;
     }
 
-    router.replace('/');
+    router.replace('/goal-setup');
   };
 
   const handleLogIn = async () => {
@@ -149,7 +149,7 @@ export default function OnboardingScreen() {
       isAnonymous: data.session?.user?.is_anonymous,
     });
 
-    router.replace('/');
+    router.replace('/goal-setup');
   };
 
   const handleGuestLogin = async () => {
@@ -169,6 +169,8 @@ export default function OnboardingScreen() {
       userId: session?.user?.id,
       isAnonymous: session?.user?.is_anonymous,
     });
+
+    router.replace('/goal-setup');
   };
 
   const handlePrimaryAction = () => {

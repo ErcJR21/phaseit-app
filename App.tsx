@@ -1,14 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Modal, StyleSheet, View } from 'react-native';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { BottomNav, TabKey } from './components/BottomNav';
 import { ExpToast } from './components/ExpToast';
 import CameraScreen, { type MealLogResult } from './CameraScreen';
 import { ExpProvider } from './context/ExpContext';
 import { BarkadaProvider } from './context/BarkadaContext';
-import { BudgetProvider } from './context/BudgetContext';
-import { UserProvider } from './context/UserContext';
+import { BudgetProvider, useBudget } from './context/BudgetContext';
 import { MacroProvider } from './context/MacroContext';
+import { useUser } from './context/UserContext';
 import {
   applyMealToSummaryStats,
   INITIAL_SUMMARY_STATS,
@@ -34,22 +35,40 @@ import {
 
 export default function App() {
   return (
-    <UserProvider>
-      <MacroProvider>
-        <ExpProvider>
-          <BarkadaProvider>
-            <BudgetProvider>
-              <PhaseEatApp />
-            </BudgetProvider>
-          </BarkadaProvider>
-        </ExpProvider>
-      </MacroProvider>
-    </UserProvider>
+    <MacroProvider>
+      <ExpProvider>
+        <BarkadaProvider>
+          <BudgetProvider>
+            <PhaseEatApp />
+          </BudgetProvider>
+        </BarkadaProvider>
+      </ExpProvider>
+    </MacroProvider>
   );
 }
 
+function AppDataSync() {
+  const { fromSetup } = useLocalSearchParams<{ fromSetup?: string }>();
+  const { reloadFromStorage: reloadBudget } = useBudget();
+  const { reloadFromStorage: reloadUserGoals } = useUser();
+
+  useFocusEffect(
+    useCallback(() => {
+      void reloadBudget();
+      // Goals were just saved in-memory during goal setup — avoid reloading stale data.
+      if (fromSetup !== '1') {
+        void reloadUserGoals();
+      }
+    }, [reloadBudget, reloadUserGoals, fromSetup]),
+  );
+
+  return null;
+}
+
 function PhaseEatApp() {
-  const [showSplash, setShowSplash] = useState(true);
+  const { fromSetup } = useLocalSearchParams<{ fromSetup?: string }>();
+  const skipSplash = fromSetup === '1';
+  const [showSplash, setShowSplash] = useState(!skipSplash);
   const [activeTab, setActiveTab] = useState<TabKey>('home');
   const [showCamera, setShowCamera] = useState(false);
   const [showMap, setShowMap] = useState(false);
@@ -64,6 +83,14 @@ function PhaseEatApp() {
   const splashOpacity = useRef(new Animated.Value(1)).current;
   const workspaceOpacity = useRef(new Animated.Value(0)).current;
   const workspaceTranslateY = useRef(new Animated.Value(16)).current;
+
+  useEffect(() => {
+    if (skipSplash) {
+      setShowSplash(false);
+      workspaceOpacity.setValue(1);
+      workspaceTranslateY.setValue(0);
+    }
+  }, [skipSplash, workspaceOpacity, workspaceTranslateY]);
 
   useEffect(() => {
     if (showSplash) return;
@@ -153,6 +180,7 @@ function PhaseEatApp() {
         },
       ]}
     >
+      <AppDataSync />
       <StatusBar style="dark" />
       <View style={styles.screen}>{renderScreen()}</View>
 

@@ -63,48 +63,58 @@ export function BudgetProvider({ children }) {
   const streakRef = useRef(0);
   const rolloverProcessedRef = useRef(false);
 
+  const loadBudgetSettings = useCallback(async () => {
+    const [storedAllowance, storedEmergencyFund, storedStreak, storedDateKey, storedHeroRewarded] =
+      await Promise.all([
+        AsyncStorage.getItem(ALLOWANCE_KEY),
+        AsyncStorage.getItem(EMERGENCY_FUND_KEY),
+        AsyncStorage.getItem(STREAK_KEY),
+        AsyncStorage.getItem(BUDGET_DATE_KEY),
+        AsyncStorage.getItem(HERO_REWARD_KEY),
+      ]);
+
+    const parsedAllowance = Number(storedAllowance);
+    const parsedEmergencyFund = Number(storedEmergencyFund);
+    const parsedStreak = Number(storedStreak);
+
+    if (Number.isFinite(parsedAllowance) && parsedAllowance > 0) {
+      setDailyAllowance(parsedAllowance);
+    }
+
+    if (Number.isFinite(parsedEmergencyFund) && parsedEmergencyFund >= 0) {
+      setEmergencyFund(parsedEmergencyFund);
+    }
+
+    if (Number.isFinite(parsedStreak) && parsedStreak >= 0) {
+      setDaysUnderBudget(parsedStreak);
+      streakRef.current = parsedStreak;
+    }
+
+    setLastBudgetDateKey(storedDateKey);
+
+    try {
+      heroRewardedRef.current = storedHeroRewarded
+        ? JSON.parse(storedHeroRewarded) === true
+        : false;
+    } catch {
+      heroRewardedRef.current = false;
+    }
+  }, []);
+
+  const reloadFromStorage = useCallback(async () => {
+    try {
+      await loadBudgetSettings();
+    } catch (error) {
+      console.warn('[BudgetContext] Failed to reload budget state:', error);
+    }
+  }, [loadBudgetSettings]);
+
   useEffect(() => {
     let isMounted = true;
 
     (async () => {
       try {
-        const [storedAllowance, storedEmergencyFund, storedStreak, storedDateKey, storedHeroRewarded] =
-          await Promise.all([
-            AsyncStorage.getItem(ALLOWANCE_KEY),
-            AsyncStorage.getItem(EMERGENCY_FUND_KEY),
-            AsyncStorage.getItem(STREAK_KEY),
-            AsyncStorage.getItem(BUDGET_DATE_KEY),
-            AsyncStorage.getItem(HERO_REWARD_KEY),
-          ]);
-
-        if (!isMounted) return;
-
-        const parsedAllowance = Number(storedAllowance);
-        const parsedEmergencyFund = Number(storedEmergencyFund);
-        const parsedStreak = Number(storedStreak);
-
-        if (Number.isFinite(parsedAllowance) && parsedAllowance > 0) {
-          setDailyAllowance(parsedAllowance);
-        }
-
-        if (Number.isFinite(parsedEmergencyFund) && parsedEmergencyFund >= 0) {
-          setEmergencyFund(parsedEmergencyFund);
-        }
-
-        if (Number.isFinite(parsedStreak) && parsedStreak >= 0) {
-          setDaysUnderBudget(parsedStreak);
-          streakRef.current = parsedStreak;
-        }
-
-        setLastBudgetDateKey(storedDateKey);
-
-        try {
-          heroRewardedRef.current = storedHeroRewarded
-            ? JSON.parse(storedHeroRewarded) === true
-            : false;
-        } catch {
-          heroRewardedRef.current = false;
-        }
+        await loadBudgetSettings();
       } catch (error) {
         console.warn('[BudgetContext] Failed to load budget state:', error);
       } finally {
@@ -115,7 +125,7 @@ export function BudgetProvider({ children }) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [loadBudgetSettings]);
 
   const evaluateDayRollover = useCallback(async () => {
     const todayKey = getLocalDateKey();
@@ -280,6 +290,7 @@ export function BudgetProvider({ children }) {
       weeklyMeals,
       quickSetOptions: QUICK_SET_ALLOWANCES,
       setAllowance,
+      reloadFromStorage,
       isReady,
     }),
     [
@@ -305,6 +316,7 @@ export function BudgetProvider({ children }) {
       todayMeals,
       weeklyMeals,
       setAllowance,
+      reloadFromStorage,
       isReady,
     ],
   );

@@ -1,0 +1,126 @@
+import type { ActivityLevel, MacroGoalTargets, UserProfile } from './macroCalculator';
+
+export type GoalSetupActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active';
+export type GoalType = 'maintain' | 'lose' | 'gain';
+
+export type GoalSetupSelections = {
+  activity: GoalSetupActivityLevel;
+  goalType: GoalType;
+  budget: number;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+};
+
+export const GOAL_SETUP_ACTIVITY_OPTIONS: {
+  key: GoalSetupActivityLevel;
+  label: string;
+  sub: string;
+  emoji: string;
+}[] = [
+  { key: 'sedentary', label: 'Mostly Sitting', sub: 'Little to no exercise', emoji: '💺' },
+  { key: 'light', label: 'Light Mover', sub: '1–3 days / week', emoji: '🚶' },
+  { key: 'moderate', label: 'Active Student', sub: '3–5 days / week', emoji: '🏃' },
+  { key: 'active', label: 'Very Active', sub: '6–7 days / week', emoji: '💪' },
+];
+
+export const GOAL_TYPE_OPTIONS: {
+  key: GoalType;
+  label: string;
+  sub: string;
+  emoji: string;
+  calAdj: number;
+}[] = [
+  { key: 'lose', label: 'Lose Weight', sub: 'Calorie deficit', emoji: '📉', calAdj: -300 },
+  { key: 'maintain', label: 'Stay Healthy', sub: 'Balanced nutrition', emoji: '⚖️', calAdj: 0 },
+  { key: 'gain', label: 'Build Muscle', sub: 'Calorie surplus', emoji: '💪', calAdj: 300 },
+];
+
+export const BUDGET_PRESETS = [
+  { label: 'Tipid Mode', amount: 100, emoji: '🪙' },
+  { label: 'Standard', amount: 200, emoji: '🍽️' },
+  { label: 'Comfortable', amount: 300, emoji: '✨' },
+  { label: 'Big Spender', amount: 500, emoji: '💸' },
+] as const;
+
+const BASE_CALORIES: Record<GoalSetupActivityLevel, number> = {
+  sedentary: 1800,
+  light: 2000,
+  moderate: 2200,
+  active: 2500,
+};
+
+const MACRO_SPLITS: Record<GoalType, { protein: number; carbs: number; fat: number }> = {
+  lose: { protein: 0.35, carbs: 0.4, fat: 0.25 },
+  maintain: { protein: 0.25, carbs: 0.5, fat: 0.25 },
+  gain: { protein: 0.3, carbs: 0.45, fat: 0.25 },
+};
+
+function mapActivityLevel(activity: GoalSetupActivityLevel): ActivityLevel {
+  if (activity === 'active') return 'active';
+  return activity;
+}
+
+export function calcMacrosFromCalories(
+  calories: number,
+  goalType: GoalType,
+): Pick<MacroGoalTargets, 'protein' | 'carbs' | 'fat'> {
+  const split = MACRO_SPLITS[goalType];
+  return {
+    protein: Math.round((calories * split.protein) / 4),
+    carbs: Math.round((calories * split.carbs) / 4),
+    fat: Math.round((calories * split.fat) / 9),
+  };
+}
+
+export function calcRecommendedGoals(
+  activity: GoalSetupActivityLevel,
+  goalType: GoalType,
+): MacroGoalTargets {
+  const calAdj = GOAL_TYPE_OPTIONS.find((option) => option.key === goalType)?.calAdj ?? 0;
+  const calories = BASE_CALORIES[activity] + calAdj;
+  const macros = calcMacrosFromCalories(calories, goalType);
+
+  return {
+    calories,
+    ...macros,
+  };
+}
+
+export function calcMacroPercentages(protein: number, carbs: number, fat: number) {
+  const macroKcal = protein * 4 + carbs * 4 + fat * 9;
+  if (macroKcal <= 0) {
+    return { macroKcal: 0, proteinPct: 0, carbsPct: 0, fatPct: 0 };
+  }
+
+  return {
+    macroKcal,
+    proteinPct: Math.round(((protein * 4) / macroKcal) * 100),
+    carbsPct: Math.round(((carbs * 4) / macroKcal) * 100),
+    fatPct: Math.round(((fat * 9) / macroKcal) * 100),
+  };
+}
+
+export function profileFromGoalSetup(activity: GoalSetupActivityLevel): UserProfile {
+  return {
+    weightKg: 60,
+    heightCm: 170,
+    age: 20,
+    gender: 'female',
+    activityLevel: mapActivityLevel(activity),
+  };
+}
+
+export function defaultGoalSetupSelections(): GoalSetupSelections {
+  const activity: GoalSetupActivityLevel = 'light';
+  const goalType: GoalType = 'maintain';
+  const goals = calcRecommendedGoals(activity, goalType);
+
+  return {
+    activity,
+    goalType,
+    budget: 300,
+    ...goals,
+  };
+}

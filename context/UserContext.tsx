@@ -9,6 +9,12 @@ import {
   type ReactNode,
 } from 'react';
 import { MACRO_GOALS } from '../data/dailyMacros';
+import { isGuestUser, useAuth } from './AuthContext';
+import {
+  fetchRemoteDailyAllowance,
+  fetchRemoteMacroGoals,
+} from '../services/macroGoalsService';
+import { DAILY_ALLOWANCE_STORAGE_KEY } from '../services/goalSetupService';
 import {
   calculateGoalsFromProfile,
   type ActivityLevel,
@@ -17,8 +23,8 @@ import {
   type UserProfile,
 } from '../utils/macroCalculator';
 
-const USER_PROFILE_KEY = '@phaseit/user-profile';
-const USER_MACRO_GOALS_KEY = '@phaseit/user-macro-goals';
+export const USER_PROFILE_KEY = '@phaseit/user-profile';
+export const USER_MACRO_GOALS_KEY = '@phaseit/user-macro-goals';
 
 export const DEFAULT_USER_PROFILE: UserProfile = {
   weightKg: 60,
@@ -42,6 +48,7 @@ type UserContextValue = {
   bmr: number;
   tdee: number;
   saveGoals: (profile: UserProfile, goals: MacroGoalTargets) => Promise<void>;
+  reloadFromStorage: () => Promise<void>;
 };
 
 const UserContext = createContext<UserContextValue | null>(null);
@@ -96,28 +103,67 @@ function parseMacroGoals(raw: string | null): MacroGoalTargets | null {
   }
 }
 
+async function readStoredGoals(): Promise<{ profile: UserProfile; goals: MacroGoalTargets }> {
+  const [storedProfile, storedGoals] = await Promise.all([
+    AsyncStorage.getItem(USER_PROFILE_KEY),
+    AsyncStorage.getItem(USER_MACRO_GOALS_KEY),
+  ]);
+
+  const profile = parseProfile(storedProfile) ?? DEFAULT_USER_PROFILE;
+  const goals = parseMacroGoals(storedGoals) ?? calculateGoalsFromProfile(profile).goals;
+
+  return { profile, goals };
+}
+
 export function UserProvider({ children }: { children: ReactNode }) {
+  const { user, isGuest, dbProfile, isProfileLoading } = useAuth();
   const [isReady, setIsReady] = useState(false);
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_USER_PROFILE);
   const [macroGoals, setMacroGoals] = useState<MacroGoalTargets>(DEFAULT_MACRO_GOALS);
 
+  const persistGoals = useCallback(async (nextProfile: UserProfile, nextGoals: MacroGoalTargets) => {
+    await Promise.all([
+      AsyncStorage.setItem(USER_PROFILE_KEY, JSON.stringify(nextProfile)),
+      AsyncStorage.setItem(USER_MACRO_GOALS_KEY, JSON.stringify(nextGoals)),
+    ]);
+  }, []);
+
+  const reloadFromStorage = useCallback(async () => {
+    const guestSession = isGuest || isGuestUser(user);
+    const isRegistered = Boolean(user) && !guestSession;
+
+    if (isRegistered && dbProfile?.setup_completed && !isProfileLoading) {
+      const remote = await fetchRemoteMacroGoals(user!.id);
+
+      if (remote) {
+        await persistGoals(remote.profile, remote.goals);
+
+        const remoteAllowance = await fetchRemoteDailyAllowance(user!.id);
+        if (remoteAllowance) {
+          await AsyncStorage.setItem(DAILY_ALLOWANCE_STORAGE_KEY, String(remoteAllowance));
+        }
+
+        setProfile(remote.profile);
+        setMacroGoals(remote.goals);
+        return;
+      }
+    }
+
+    const { profile: nextProfile, goals: nextGoals } = await readStoredGoals();
+    setProfile(nextProfile);
+    setMacroGoals(nextGoals);
+  }, [user, isGuest, dbProfile?.setup_completed, isProfileLoading, persistGoals]);
+
   useEffect(() => {
+    if (isProfileLoading && user && !isGuest && !isGuestUser(user)) {
+      return;
+    }
+
     let isMounted = true;
 
     (async () => {
       try {
-        const [storedProfile, storedGoals] = await Promise.all([
-          AsyncStorage.getItem(USER_PROFILE_KEY),
-          AsyncStorage.getItem(USER_MACRO_GOALS_KEY),
-        ]);
-
-        if (!isMounted) return;
-
-        const nextProfile = parseProfile(storedProfile) ?? DEFAULT_USER_PROFILE;
-        const nextGoals = parseMacroGoals(storedGoals) ?? calculateGoalsFromProfile(nextProfile).goals;
-
-        setProfile(nextProfile);
-        setMacroGoals(nextGoals);
+        await reloadFromStorage();
       } catch (error) {
         console.warn('[UserContext] Failed to load user goals:', error);
       } finally {
@@ -128,17 +174,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [reloadFromStorage, isProfileLoading, user?.id]);
 
-  const saveGoals = useCallback(async (nextProfile: UserProfile, nextGoals: MacroGoalTargets) => {
-    setProfile(nextProfile);
-    setMacroGoals(nextGoals);
-
-    await Promise.all([
-      AsyncStorage.setItem(USER_PROFILE_KEY, JSON.stringify(nextProfile)),
-      AsyncStorage.setItem(USER_MACRO_GOALS_KEY, JSON.stringify(nextGoals)),
-    ]);
-  }, []);
+  const saveGoals = useCallback(
+    async (nextProfile: UserProfile, nextGoals: MacroGoalTargets) => {
+      setProfile(nextProfile);
+      setMacroGoals(nextGoals);
+      await persistGoals(nextProfile, nextGoals);
+    },
+    [persistGoals],
+  );
 
   const { bmr, tdee } = useMemo(() => calculateGoalsFromProfile(profile), [profile]);
 
@@ -150,8 +195,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
       bmr,
       tdee,
       saveGoals,
+      reloadFromStorage,
     }),
-    [isReady, profile, macroGoals, bmr, tdee, saveGoals],
+    [isReady, profile, macroGoals, bmr, tdee, saveGoals, reloadFromStorage],
   );
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

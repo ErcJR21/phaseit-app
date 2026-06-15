@@ -1,5 +1,6 @@
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { resetGuestSetupForNewSession } from './goalSetupService';
 
 export type GuestSignInResult = {
   session: Session | null;
@@ -8,6 +9,8 @@ export type GuestSignInResult = {
 
 export async function signInAsGuest(): Promise<GuestSignInResult> {
   console.log('[PhaseEat:GuestAuth] Starting anonymous sign-in…');
+
+  await resetGuestSetupForNewSession();
 
   const { data, error } = await supabase.auth.signInAnonymously();
 
