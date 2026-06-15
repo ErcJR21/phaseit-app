@@ -1,7 +1,8 @@
 import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { MapPin, UtensilsCrossed, Wallet } from 'lucide-react-native';
+import { PhaseEatLogo } from '../components/PhaseEatLogo';
 import { colors, shadows } from '../theme/colors';
-import { layout, radii, spacing } from '../theme/spacing';
+import { layout, radii, sizes, spacing } from '../theme/spacing';
 import { fontWeights } from '../theme/typography';
 
 type SplashScreenProps = {
@@ -32,28 +33,6 @@ const features = [
   },
 ] as const;
 
-function SplashLogo() {
-  return (
-    <View style={styles.logoBlock}>
-      <View style={styles.logoMarkWrap}>
-        <View style={styles.logoCircle}>
-          <Text style={styles.logoEmoji}>🍲</Text>
-        </View>
-        <View style={styles.pinBadge}>
-          <MapPin size={14} color={colors.white} strokeWidth={2.5} fill={colors.coral} />
-        </View>
-      </View>
-
-      <Text style={styles.wordmark}>
-        <Text style={styles.wordmarkPhase}>Phase</Text>
-        <Text style={styles.wordmarkIt}>It</Text>
-      </Text>
-
-      <Text style={styles.tagline}>Eat Smart. Stay on Track. We've Got You.</Text>
-    </View>
-  );
-}
-
 export function SplashScreen({ onGetStarted }: SplashScreenProps) {
   return (
     <SafeAreaView style={styles.safe}>
@@ -62,7 +41,7 @@ export function SplashScreen({ onGetStarted }: SplashScreenProps) {
       <View style={styles.blobBottomRight} />
 
       <View style={styles.content}>
-        <SplashLogo />
+        <PhaseEatLogo variant="full" height={sizes.logoSplashHeight} />
 
         <View style={styles.featureList}>
           {features.map(({ id, label, icon: Icon, iconColor, iconBg }) => (
@@ -130,64 +109,11 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xxxl,
     paddingBottom: spacing.xxl,
     justifyContent: 'space-between',
-  },
-  logoBlock: {
     alignItems: 'center',
-    gap: spacing.lg,
-  },
-  logoMarkWrap: {
-    width: 100,
-    height: 100,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.card,
-  },
-  logoEmoji: {
-    fontSize: 44,
-  },
-  pinBadge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.coral,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: colors.white,
-  },
-  wordmark: {
-    fontSize: 34,
-    fontWeight: fontWeights.bold,
-    letterSpacing: -0.8,
-    lineHeight: 40,
-  },
-  wordmarkPhase: {
-    color: colors.navy,
-  },
-  wordmarkIt: {
-    color: colors.green,
-  },
-  tagline: {
-    fontSize: 13,
-    fontWeight: fontWeights.medium,
-    color: colors.muted,
-    textAlign: 'center',
-    lineHeight: 18,
-    maxWidth: 260,
   },
   featureList: {
     gap: spacing.md,
+    alignSelf: 'stretch',
   },
   featureCard: {
     flexDirection: 'row',
@@ -216,6 +142,7 @@ const styles = StyleSheet.create({
   footerBlock: {
     gap: spacing.lg,
     alignItems: 'center',
+    alignSelf: 'stretch',
   },
   ctaButton: {
     width: '100%',

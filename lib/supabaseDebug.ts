@@ -11,14 +11,14 @@ export function logSupabaseRequest(
   operation: string,
   details?: Record<string, unknown>,
 ): void {
-  console.log(`[PhaseIt:Supabase] ${operation}`, details ?? '');
+  console.log(`[PhaseEat:Supabase] ${operation}`, details ?? '');
 }
 
 export function logSupabaseSuccess(
   operation: string,
   details?: Record<string, unknown>,
 ): void {
-  console.log(`[PhaseIt:Supabase] ${operation} OK`, details ?? '');
+  console.log(`[PhaseEat:Supabase] ${operation} OK`, details ?? '');
 }
 
 export function logSupabaseError(
@@ -26,7 +26,7 @@ export function logSupabaseError(
   error: SupabaseErrorLike,
   table?: SupabaseTableName,
 ): void {
-  console.error(`[PhaseIt:Supabase] ${operation} failed`, {
+  console.error(`[PhaseEat:Supabase] ${operation} failed`, {
     table: table ? `public.${table}` : undefined,
     code: error.code,
     message: error.message,
@@ -39,7 +39,7 @@ export function logSupabaseError(
     error.message.includes("Could not find the table 'public.")
   ) {
     console.error(
-      `[PhaseIt:Supabase] Missing table${table ? `: public.${table}` : ''}. ` +
+      `[PhaseEat:Supabase] Missing table${table ? `: public.${table}` : ''}. ` +
         'Run supabase/schema.sql in the Supabase SQL Editor, then wait a few seconds for the schema cache to refresh.',
     );
   }

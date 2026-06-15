@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { PhaseItLogo } from '../components/PhaseItLogo';
+import { PhaseEatLogo } from '../components/PhaseEatLogo';
 import { BudgetTracker } from '../components/BudgetTracker';
 import { QuickActions } from '../components/QuickActions';
 import { MacroTracker } from '../components/dashboard/MacroTracker';
@@ -18,7 +18,7 @@ import {
 } from '../components/dashboard/SummaryCards';
 import { useMacros } from '../context/MacroContext';
 import { colors } from '../theme/colors';
-import { layout, spacing } from '../theme/spacing';
+import { layout, sizes, spacing } from '../theme/spacing';
 import { typography } from '../theme/typography';
 
 export type DashboardProps = {
@@ -74,7 +74,7 @@ export function Dashboard({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.headerRow}>
-          <PhaseItLogo />
+          <PhaseEatLogo variant="compact" size={sizes.logoMarkSize} />
           <Pressable
             style={styles.profileButton}
             onPress={onOpenProfile}

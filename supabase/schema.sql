@@ -1,5 +1,5 @@
 -- =============================================================================
--- PhaseIt — comprehensive Supabase schema (idempotent / safe to re-run)
+-- PhaseEat — comprehensive Supabase schema (idempotent / safe to re-run)
 -- Run in Supabase Dashboard → SQL Editor
 --
 -- Conventions
@@ -30,7 +30,7 @@ alter table public.profiles
 
 -- Backfill NOT NULL full_name for legacy rows (safe no-op when already set)
 update public.profiles
-set full_name = coalesce(full_name, 'PhaseIt User')
+set full_name = coalesce(full_name, 'PhaseEat User')
 where full_name is null;
 
 alter table public.profiles
@@ -78,7 +78,7 @@ begin
   insert into public.profiles (id, full_name, role)
   values (
     new.id,
-    coalesce(new.raw_user_meta_data ->> 'full_name', 'PhaseIt User'),
+    coalesce(new.raw_user_meta_data ->> 'full_name', 'PhaseEat User'),
     coalesce(new.raw_user_meta_data ->> 'role', 'student')
   )
   on conflict (id) do nothing;
@@ -281,7 +281,7 @@ grant select, insert, update, delete on public.budgets to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- campus_stalls (public read; authenticated users may contribute)
--- Uses lat/lng to match existing PhaseIt Supabase project columns.
+-- Uses lat/lng to match existing PhaseEat Supabase project columns.
 -- ---------------------------------------------------------------------------
 create table if not exists public.campus_stalls (
   id uuid primary key default gen_random_uuid(),

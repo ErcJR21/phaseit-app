@@ -31,7 +31,7 @@ These rules define how to translate Figma inputs into code for this project and 
 - Strive for 1:1 visual parity with the Figma design. When conflicts arise, prefer design-system tokens and adjust spacing or sizes minimally to match visuals.
 - Validate the final UI against the Figma screenshot for both look and behavior.
 
-### PhaseIt-specific context
+### PhaseEat-specific context
 
 - Design system tokens live in `theme/designSystem.ts` (sourced from Figma Make file key `9eNg7pR7bMo0DkjHijotU6`).
 - Prefer existing theme tokens (`colors`, `spacing`, `typography`, `radii`) over hardcoded values.

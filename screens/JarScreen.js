@@ -9,13 +9,13 @@ import {
 } from 'react-native';
 import { AlertTriangle, Archive, ChevronLeft, Shield, Sparkles, Trophy } from 'lucide-react-native';
 import { MealThumbnail } from '../components/MealThumbnail';
-import { PhaseItLogo } from '../components/PhaseItLogo';
+import { PhaseEatLogo } from '../components/PhaseEatLogo';
 import { useBarkada } from '../context/BarkadaContext';
 import { BUDGET_HERO_STREAK, useBudget } from '../context/BudgetContext';
 import { EXP_REWARDS } from '../data/exp';
 import { components } from '../theme/designSystem';
 import { colors, shadows } from '../theme/colors';
-import { layout, radii, spacing } from '../theme/spacing';
+import { layout, radii, sizes, spacing } from '../theme/spacing';
 import { typography } from '../theme/typography';
 
 function formatPeso(amount) {
@@ -296,7 +296,7 @@ export function JarScreen({ onClose }) {
           ) : (
             <View style={styles.backPlaceholder} />
           )}
-          <PhaseItLogo />
+          <PhaseEatLogo variant="compact" size={sizes.logoMarkSize} />
           <View style={styles.backPlaceholder} />
         </View>
 

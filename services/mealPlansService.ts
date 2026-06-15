@@ -10,13 +10,13 @@ function logMealPlansError(
     error.message.includes("Could not find the table 'public.meal_plans'")
   ) {
     console.error(
-      `[PhaseIt] ${operation}: public.meal_plans does not exist or is not exposed via the Data API. ` +
+      `[PhaseEat] ${operation}: public.meal_plans does not exist or is not exposed via the Data API. ` +
         'Run supabase/meal_plans.sql in the Supabase SQL Editor, then confirm the table appears under Table Editor.',
     );
     return;
   }
 
-  console.error(`[PhaseIt] ${operation} error:`, error.message, error.details ?? '');
+  console.error(`[PhaseEat] ${operation} error:`, error.message, error.details ?? '');
 }
 
 export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;

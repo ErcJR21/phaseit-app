@@ -14,10 +14,11 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Eye, EyeOff, MapPin, Apple } from 'lucide-react-native';
+import { Eye, EyeOff, Apple } from 'lucide-react-native';
+import { PhaseEatLogo } from '../components/PhaseEatLogo';
 import { supabase } from '../lib/supabase';
 import { colors, shadows } from '../theme/colors';
-import { layout, radii, spacing } from '../theme/spacing';
+import { layout, radii, sizes, spacing } from '../theme/spacing';
 import { fontWeights } from '../theme/typography';
 
 type AuthMode = 'signup' | 'login';
@@ -37,23 +38,8 @@ const tokens = {
   navyShadow: 'rgba(15, 30, 58, 0.25)',
 } as const;
 
-function PhaseItOnboardingLogo() {
-  return (
-    <View style={styles.logoBlock}>
-      <View style={styles.logoMarkWrap}>
-        <View style={styles.logoCircle}>
-          <Text style={styles.logoEmoji}>🍲</Text>
-        </View>
-        <View style={styles.pinBadge}>
-          <MapPin size={14} color={colors.white} strokeWidth={2.5} fill={colors.coral} />
-        </View>
-      </View>
-      <Text style={styles.wordmark}>
-        <Text style={styles.wordmarkPhase}>Phase</Text>
-        <Text style={styles.wordmarkIt}>It</Text>
-      </Text>
-    </View>
-  );
+function PhaseEatOnboardingLogo() {
+  return <PhaseEatLogo variant="full" height={sizes.logoOnboardingHeight} />;
 }
 
 function SocialAuthButton({
@@ -192,11 +178,7 @@ export default function OnboardingScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <PhaseItOnboardingLogo />
-            <Text style={styles.headerTagline}>
-              Eat Smart. Stay On Track.{' '}
-              <Text style={styles.headerTaglineAccent}>We&apos;ve Got You.</Text>
-            </Text>
+            <PhaseEatOnboardingLogo />
           </View>
 
           <View style={styles.roleTabsWrap}>
@@ -343,12 +325,12 @@ export default function OnboardingScreen() {
                     onPress={handlePrimaryAction}
                     disabled={loading}
                     accessibilityRole="button"
-                    accessibilityLabel="Join PhaseIt"
+                    accessibilityLabel="Join PhaseEat"
                   >
                     {loading ? (
                       <ActivityIndicator color={colors.white} />
                     ) : (
-                      <Text style={styles.primaryCtaLabel}>Join PhaseIt 🍚</Text>
+                      <Text style={styles.primaryCtaLabel}>Join PhaseEat 🍚</Text>
                     )}
                   </Pressable>
                 </View>

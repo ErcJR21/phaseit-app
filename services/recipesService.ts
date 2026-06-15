@@ -9,13 +9,13 @@ function logRecipesError(
     error.message.includes("Could not find the table 'public.recipes'")
   ) {
     console.error(
-      `[PhaseIt] ${operation}: public.recipes does not exist or is not exposed via the Data API. ` +
+      `[PhaseEat] ${operation}: public.recipes does not exist or is not exposed via the Data API. ` +
         'Run supabase/recipes.sql in the Supabase SQL Editor, then confirm the table appears under Table Editor.',
     );
     return;
   }
 
-  console.error(`[PhaseIt] ${operation} error:`, error.message, error.details ?? '');
+  console.error(`[PhaseEat] ${operation} error:`, error.message, error.details ?? '');
 }
 
 export type RecipeRow = {

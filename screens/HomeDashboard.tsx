@@ -1,8 +1,9 @@
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { PhaseItLogo } from '../components/PhaseItLogo';
+import { PhaseEatLogo } from '../components/PhaseEatLogo';
 import { BudgetTracker } from '../components/BudgetTracker';
 import { QuickActions } from '../components/QuickActions';
 import { colors } from '../theme/colors';
+import { sizes } from '../theme/spacing';
 
 type HomeDashboardProps = {
   userName?: string;
@@ -32,7 +33,7 @@ export function HomeDashboard({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.headerRow}>
-          <PhaseItLogo />
+          <PhaseEatLogo variant="compact" size={sizes.logoMarkSize} />
           <Pressable style={styles.profileButton}>
             <View style={styles.profileDot} />
           </Pressable>

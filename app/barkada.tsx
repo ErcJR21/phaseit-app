@@ -7,7 +7,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Bell, MapPin } from 'lucide-react-native';
+import { Bell } from 'lucide-react-native';
+import { PhaseEatLogo } from '../components/PhaseEatLogo';
 import { Pressable } from 'react-native';
 import { BarkadaChallengesTab } from '../components/barkada/BarkadaChallengesTab';
 import {
@@ -26,20 +27,11 @@ import { BarkadaGroupsTab } from '../components/barkada/BarkadaGroupsTab';
 import { BarkadaLeaderboardTab } from '../components/barkada/BarkadaLeaderboardTab';
 import { BarkadaTabs } from '../components/barkada/BarkadaTabs';
 import { colors, shadows } from '../theme/colors';
-import { layout, radii, spacing } from '../theme/spacing';
+import { layout, radii, sizes, spacing } from '../theme/spacing';
 import { fontWeights } from '../theme/typography';
 
 function BarkadaLogoMark() {
-  return (
-    <View style={styles.logoMark}>
-      <View style={styles.logoCircle}>
-        <Text style={styles.logoEmoji}>🍲</Text>
-      </View>
-      <View style={styles.logoPin}>
-        <MapPin size={10} color={colors.white} strokeWidth={2.5} fill={colors.coral} />
-      </View>
-    </View>
-  );
+  return <PhaseEatLogo variant="compact" size={sizes.logoMarkSize} />;
 }
 
 export default function BarkadaScreen() {

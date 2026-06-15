@@ -8,7 +8,7 @@ import {
 import { EXP_REWARDS } from '../data/exp';
 import { useExperience } from './ExpContext';
 
-export const MOCK_INVITE_LINK = 'https://phaseit.app/join/mapua-batch-2026';
+export const MOCK_INVITE_LINK = 'https://phaseeat.app/join/mapua-batch-2026';
 
 const INITIAL_VOTES = {
   'kuya-marios': 3,

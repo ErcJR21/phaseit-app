@@ -32,6 +32,9 @@ export const radii = {
 
 export const sizes = {
   logoIcon: 40,
+  logoSplashHeight: 100,
+  logoOnboardingHeight: 80,
+  logoMarkSize: 36,
   profileButton: 40,
   profileDot: 28,
   quickActionCard: 108,

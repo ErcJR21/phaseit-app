@@ -171,7 +171,7 @@ export default function CameraScreen({ onClose, onUploadComplete }: CameraScreen
         <View style={styles.permissionBody}>
           <Text style={styles.permissionTitle}>Camera access needed</Text>
           <Text style={styles.permissionCopy}>
-            PhaseIt uses your camera to photograph meals and log them automatically.
+            PhaseEat uses your camera to photograph meals and log them automatically.
           </Text>
           <Pressable style={styles.permissionCta} onPress={requestPermission}>
             <Text style={styles.permissionCtaText}>Allow camera</Text>

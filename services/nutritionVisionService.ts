@@ -140,7 +140,7 @@ export async function analyzeMealFromImage(imageUrl: string): Promise<MealNutrit
 
   if (!response.ok) {
     const errorBody = await response.text();
-    console.error('[PhaseIt] OpenAI Vision error:', response.status, errorBody);
+    console.error('[PhaseEat] OpenAI Vision error:', response.status, errorBody);
     throw new Error(`Vision API failed (${response.status}). Check your API key and quota.`);
   }
 

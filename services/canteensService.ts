@@ -4,13 +4,13 @@ import { supabase } from '../lib/supabase';
 function logCanteensError(operation: string, error: { code?: string; message: string; details?: string }) {
   if (error.code === 'PGRST205' || error.message.includes("Could not find the table 'public.canteens'")) {
     console.error(
-      `[PhaseIt] ${operation}: public.canteens does not exist or is not exposed via the Data API. ` +
+      `[PhaseEat] ${operation}: public.canteens does not exist or is not exposed via the Data API. ` +
         'Run supabase/canteens.sql in the Supabase SQL Editor, then confirm the table appears under Table Editor.',
     );
     return;
   }
 
-  console.error(`[PhaseIt] ${operation} error:`, error.message, error.details ?? '');
+  console.error(`[PhaseEat] ${operation} error:`, error.message, error.details ?? '');
 }
 
 export type CanteenRow = {

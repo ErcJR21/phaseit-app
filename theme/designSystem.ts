@@ -1,5 +1,5 @@
 /**
- * PhaseIt design system — sourced from PhaseIT_proto (Figma Make).
+ * PhaseEat design system — sourced from PhaseIT_proto (Figma Make).
  * Figma file key: 9eNg7pR7bMo0DkjHijotU6
  * Published preview routes use `/splash`, `/dashboard`, `/log-meal`, etc.
  *
@@ -14,7 +14,7 @@ export { colors, shadows } from './colors';
 export { typography, fontWeights } from './typography';
 export { spacing, layout, radii, sizes } from './spacing';
 
-export type PhaseItRoute =
+export type PhaseEatRoute =
   | '/splash'
   | '/onboarding'
   | '/dashboard'
@@ -29,7 +29,7 @@ export type PhaseItRoute =
 export type ImplementationStatus = 'built' | 'placeholder' | 'not-started';
 
 export type ScreenSpec = {
-  route: PhaseItRoute;
+  route: PhaseEatRoute;
   name: string;
   status: ImplementationStatus;
   file?: string;
@@ -187,6 +187,19 @@ export const components = {
     borderRadius: radii.iconSquare,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
+  },
+  logoFull: {
+    height: sizes.logoSplashHeight,
+  },
+  logoOnboarding: {
+    height: sizes.logoOnboardingHeight,
+  },
+  logoMark: {
+    size: sizes.logoMarkSize,
+  },
+  logoIcon: {
+    width: sizes.logoIcon,
+    height: sizes.logoIcon,
   },
   progressTrack: {
     height: 12,

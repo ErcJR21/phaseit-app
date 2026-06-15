@@ -16,12 +16,12 @@ import {
   Wallet,
   TrendingUp,
 } from 'lucide-react-native';
-import { PhaseItLogo } from '../components/PhaseItLogo';
+import { PhaseEatLogo } from '../components/PhaseEatLogo';
 import { MEAL_THUMBNAIL_SIZE } from '../components/MealThumbnail';
 import { useMacros } from '../context/MacroContext';
 import { components } from '../theme/designSystem';
 import { colors, shadows } from '../theme/colors';
-import { layout, radii, spacing } from '../theme/spacing';
+import { layout, radii, sizes, spacing } from '../theme/spacing';
 import { fontWeights, typography } from '../theme/typography';
 import {
   calculateMealSummary,
@@ -184,7 +184,7 @@ export function MealHistoryScreen({ onLogMeal }) {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <PhaseItLogo />
+            <PhaseEatLogo variant="compact" size={sizes.logoMarkSize} />
           </View>
 
           <View style={styles.titleBlock}>

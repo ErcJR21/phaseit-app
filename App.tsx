@@ -39,7 +39,7 @@ export default function App() {
         <ExpProvider>
           <BarkadaProvider>
             <BudgetProvider>
-              <PhaseItApp />
+              <PhaseEatApp />
             </BudgetProvider>
           </BarkadaProvider>
         </ExpProvider>
@@ -48,7 +48,7 @@ export default function App() {
   );
 }
 
-function PhaseItApp() {
+function PhaseEatApp() {
   const [showSplash, setShowSplash] = useState(true);
   const [activeTab, setActiveTab] = useState<TabKey>('home');
   const [showCamera, setShowCamera] = useState(false);

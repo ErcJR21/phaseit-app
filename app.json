@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "PhaseItApp",
-    "slug": "PhaseItApp",
+    "name": "PhaseEat",
+    "slug": "PhaseEatApp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -9,7 +9,7 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Allow PhaseIt to access your location to find food spots near campus."
+        "NSLocationWhenInUseUsageDescription": "Allow PhaseEat to access your location to find food spots near campus."
       }
     },
     "android": {
@@ -38,13 +38,13 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow PhaseIt to access your camera to photograph meals."
+          "cameraPermission": "Allow PhaseEat to access your camera to photograph meals."
         }
       ],
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Allow PhaseIt to access your location to find food spots near campus."
+          "locationWhenInUsePermission": "Allow PhaseEat to access your location to find food spots near campus."
         }
       ],
       [

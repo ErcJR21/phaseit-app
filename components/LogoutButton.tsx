@@ -30,7 +30,7 @@ export function LogoutButton({ variant = 'button', label = 'Logout' }: LogoutBut
     setLoading(false);
 
     if (error) {
-      console.error('[PhaseIt] signOut error:', error.message);
+      console.error('[PhaseEat] signOut error:', error.message);
       Alert.alert('Sign out failed', error.message);
       return;
     }

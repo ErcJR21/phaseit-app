@@ -6,8 +6,8 @@ const googleMapsApiKey =
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'PhaseItApp',
-  slug: 'PhaseItApp',
+  name: 'PhaseEat',
+  slug: 'PhaseEatApp',
   scheme: 'phaseitapp',
   version: '1.0.0',
   orientation: 'portrait',
@@ -21,7 +21,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     infoPlist: {
       NSLocationWhenInUseUsageDescription:
-        'PhaseIt uses your location to show budget-friendly food spots near campus.',
+        'PhaseEat uses your location to show budget-friendly food spots near campus.',
     },
   },
   android: {
@@ -50,14 +50,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-camera',
       {
-        cameraPermission: 'Allow PhaseIt to access your camera to photograph meals.',
+        cameraPermission: 'Allow PhaseEat to access your camera to photograph meals.',
       },
     ],
     [
       'expo-location',
       {
         locationWhenInUsePermission:
-          'Allow PhaseIt to access your location to find food spots near campus.',
+          'Allow PhaseEat to access your location to find food spots near campus.',
       },
     ],
     [

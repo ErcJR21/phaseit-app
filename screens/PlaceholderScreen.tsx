@@ -10,7 +10,7 @@ export function PlaceholderScreen({ title }: PlaceholderScreenProps) {
     <SafeAreaView style={styles.safe}>
       <View style={styles.body}>
         <Text style={styles.title}>{title}</Text>
-        <Text style={styles.subtitle}>Coming soon in PhaseIt</Text>
+        <Text style={styles.subtitle}>Coming soon in PhaseEat</Text>
       </View>
     </SafeAreaView>
   );

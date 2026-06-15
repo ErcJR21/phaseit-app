@@ -30,7 +30,7 @@ export type Vendor = {
   menu: MenuItem[];
 };
 
-/** UP Diliman campus center — matches Figma phaseit-map neighborhood */
+/** UP Diliman campus center — matches Figma phaseeat-map neighborhood */
 export const CAMPUS_CENTER = {
   latitude: 14.6537,
   longitude: 121.0689,
