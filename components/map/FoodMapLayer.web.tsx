@@ -124,7 +124,6 @@ const FoodMapLayer = forwardRef<FoodMapLayerRef, FoodMapLayerProps>(function Foo
                 { left: position.left, top: position.top },
               ]}
               onPress={() => onSelectVendor(vendor.id)}
-              accessibilityRole="button"
               accessibilityLabel={`${vendor.name}, ₱${vendor.startingPrice}`}
             >
               <PricePillMarker

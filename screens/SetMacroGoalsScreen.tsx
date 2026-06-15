@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -97,6 +98,7 @@ export function SetMacroGoalsScreen({ onClose }: SetMacroGoalsScreenProps) {
   const [gender, setGender] = useState<Gender>(profile.gender);
   const [activityLevel, setActivityLevel] = useState<ActivityLevel>(profile.activityLevel);
   const [showActivityMenu, setShowActivityMenu] = useState(false);
+  const [dropdownMenuTop, setDropdownMenuTop] = useState(0);
 
   const [calories, setCalories] = useState(String(macroGoals.calories));
   const [protein, setProtein] = useState(String(macroGoals.protein));
@@ -175,7 +177,7 @@ export function SetMacroGoalsScreen({ onClose }: SetMacroGoalsScreenProps) {
             targets manually.
           </Text>
 
-          <View style={styles.card}>
+          <View style={[styles.card, showActivityMenu && styles.cardWithOpenDropdown]}>
             <Text style={styles.cardTitle}>Your Profile</Text>
 
             <View style={styles.fieldGrid}>
@@ -208,20 +210,29 @@ export function SetMacroGoalsScreen({ onClose }: SetMacroGoalsScreenProps) {
               </View>
             </View>
 
-            <View style={styles.field}>
+            <View
+              style={[styles.dropdownField, showActivityMenu && styles.dropdownFieldOpen]}
+            >
               <Text style={styles.fieldLabel}>Activity Level</Text>
-              <Pressable
-                style={styles.dropdownTrigger}
-                onPress={() => setShowActivityMenu((prev) => !prev)}
-                accessibilityRole="button"
-                accessibilityLabel="Select activity level"
+              <View
+                onLayout={(event) => {
+                  const { y, height } = event.nativeEvent.layout;
+                  setDropdownMenuTop(y + height + spacing.xs);
+                }}
               >
-                <Text style={styles.dropdownValue}>{activityLabel}</Text>
-                <ChevronDown size={18} color={colors.navy} strokeWidth={2.2} />
-              </Pressable>
+                <Pressable
+                  style={styles.dropdownTrigger}
+                  onPress={() => setShowActivityMenu((prev) => !prev)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Select activity level"
+                >
+                  <Text style={styles.dropdownValue}>{activityLabel}</Text>
+                  <ChevronDown size={18} color={colors.navy} strokeWidth={2.2} />
+                </Pressable>
+              </View>
 
               {showActivityMenu ? (
-                <View style={styles.dropdownMenu}>
+                <View style={[styles.dropdownMenu, { top: dropdownMenuTop }]}>
                   {ACTIVITY_LEVEL_OPTIONS.map((option) => {
                     const selected = activityLevel === option.key;
 
@@ -252,7 +263,7 @@ export function SetMacroGoalsScreen({ onClose }: SetMacroGoalsScreenProps) {
             </View>
           </View>
 
-          <View style={styles.summaryCard}>
+          <View style={[styles.summaryCard, showActivityMenu && styles.summaryCardBehindDropdown]}>
             <Text style={styles.summaryTitle}>Estimated Needs</Text>
             <View style={styles.summaryRow}>
               <View style={styles.summaryItem}>
@@ -351,6 +362,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: spacing.lg,
     gap: spacing.lg,
+    ...(Platform.OS === 'web' ? { overflow: 'visible' as const } : null),
   },
   header: {
     flexDirection: 'row',
@@ -380,6 +392,11 @@ const styles = StyleSheet.create({
   card: {
     ...components.card,
     gap: spacing.md,
+    overflow: 'visible',
+  },
+  cardWithOpenDropdown: {
+    zIndex: 20,
+    elevation: 20,
   },
   cardTitle: {
     ...typography.sectionTitle,
@@ -450,6 +467,16 @@ const styles = StyleSheet.create({
   optionPillTextSelected: {
     color: colors.white,
   },
+  dropdownField: {
+    gap: spacing.xs,
+    position: 'relative',
+    overflow: 'visible',
+    zIndex: 1,
+  },
+  dropdownFieldOpen: {
+    zIndex: 30,
+    elevation: 30,
+  },
   dropdownTrigger: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -467,10 +494,16 @@ const styles = StyleSheet.create({
     color: colors.navy,
   },
   dropdownMenu: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.track,
     backgroundColor: colors.white,
+    zIndex: 40,
+    elevation: 40,
+    ...shadows.card,
     overflow: 'hidden',
   },
   dropdownItem: {
@@ -496,6 +529,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.greenTint15,
     borderWidth: 1,
     borderColor: colors.green,
+    zIndex: 0,
+  },
+  summaryCardBehindDropdown: {
+    zIndex: 0,
+    elevation: 0,
   },
   summaryTitle: {
     ...typography.sectionTitle,

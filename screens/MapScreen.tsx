@@ -320,38 +320,46 @@ export default function MapScreen({ onClose, onLogMeal }: MapScreenProps) {
     const { latitude, longitude } = restaurantToVendor(restaurant).coordinate;
 
     return (
-      <Pressable
+      <View
         key={restaurant.id}
         style={[styles.restaurantCard, selected && styles.restaurantCardSelected]}
-        onPress={() => handleSelectVendor(restaurant.id)}
-        accessibilityRole="button"
-        accessibilityState={{ selected }}
-        accessibilityLabel={`${restaurant.name}, ₱${restaurant.price}, ${restaurant.isOpen ? 'open' : 'closed'}`}
       >
-        <View style={styles.restaurantCardHeader}>
-          <Text style={styles.restaurantName} numberOfLines={1}>
-            {restaurant.name}
-          </Text>
-          <Text style={styles.restaurantPrice}>₱{restaurant.price}</Text>
-        </View>
-        <View style={styles.restaurantMetaRow}>
-          <Text style={restaurant.isOpen ? styles.openText : styles.closedText}>
-            {restaurant.isOpen ? 'Open' : 'Closed'}
-          </Text>
-          <Text style={styles.restaurantTags} numberOfLines={1}>
-            {restaurant.tags.map((tag) => tag.replace(/-/g, ' ')).join(' · ')}
-          </Text>
-        </View>
+        <Pressable
+          onPress={() => handleSelectVendor(restaurant.id)}
+          accessibilityRole="button"
+          accessibilityState={{ selected }}
+          accessibilityLabel={`${restaurant.name}, ₱${restaurant.price}, ${restaurant.isOpen ? 'open' : 'closed'}`}
+        >
+          <View style={styles.restaurantCardBody}>
+            <View style={styles.restaurantCardHeader}>
+              <Text style={styles.restaurantName} numberOfLines={1}>
+                {restaurant.name}
+              </Text>
+              <Text style={styles.restaurantPrice}>₱{restaurant.price}</Text>
+            </View>
+            <View style={styles.restaurantMetaRow}>
+              <Text style={restaurant.isOpen ? styles.openText : styles.closedText}>
+                {restaurant.isOpen ? 'Open' : 'Closed'}
+              </Text>
+              <Text style={styles.restaurantTags} numberOfLines={1}>
+                {restaurant.tags.map((tag) => tag.replace(/-/g, ' ')).join(' · ')}
+              </Text>
+            </View>
+          </View>
+        </Pressable>
         <Pressable
           style={styles.directionsButton}
-          onPress={() => void handleGetDirections(latitude, longitude)}
+          onPress={(event) => {
+            event?.stopPropagation?.();
+            void handleGetDirections(latitude, longitude);
+          }}
           accessibilityRole="button"
           accessibilityLabel={`Get directions to ${restaurant.name}`}
         >
           <MapPin size={14} color={colors.white} strokeWidth={2} />
           <Text style={styles.directionsButtonText}>Get Directions</Text>
         </Pressable>
-      </Pressable>
+      </View>
     );
   };
 
@@ -399,7 +407,12 @@ export default function MapScreen({ onClose, onLogMeal }: MapScreenProps) {
 
       <SafeAreaView style={styles.overlay} pointerEvents="box-none">
         <View style={styles.topBar}>
-          <Pressable style={styles.backButton} onPress={onClose} accessibilityLabel="Go back">
+          <Pressable
+            style={styles.backButton}
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
             <ChevronLeft size={22} color={colors.navy} strokeWidth={2.5} />
           </Pressable>
           <View style={styles.titleBlock}>
@@ -412,6 +425,7 @@ export default function MapScreen({ onClose, onLogMeal }: MapScreenProps) {
           </View>
           <Pressable
             style={styles.addPinButton}
+            accessibilityRole="button"
             accessibilityLabel="Drop a new pin"
             onPress={() => setShowAddModal(true)}
           >
@@ -553,6 +567,9 @@ const styles = StyleSheet.create({
   restaurantCardSelected: {
     borderColor: colors.green,
     backgroundColor: colors.greenTint15,
+  },
+  restaurantCardBody: {
+    flexGrow: 1,
   },
   restaurantCardHeader: {
     flexDirection: 'row',

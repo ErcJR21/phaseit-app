@@ -1,5 +1,17 @@
 import type { Vendor, VendorBadge, VendorType } from '../data/vendors';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../lib/supabase';
+
+function logCanteensError(operation: string, error: { code?: string; message: string; details?: string }) {
+  if (error.code === 'PGRST205' || error.message.includes("Could not find the table 'public.canteens'")) {
+    console.error(
+      `[PhaseIt] ${operation}: public.canteens does not exist or is not exposed via the Data API. ` +
+        'Run supabase/canteens.sql in the Supabase SQL Editor, then confirm the table appears under Table Editor.',
+    );
+    return;
+  }
+
+  console.error(`[PhaseIt] ${operation} error:`, error.message, error.details ?? '');
+}
 
 export type CanteenRow = {
   id: string;
@@ -140,7 +152,7 @@ export async function fetchCanteens(): Promise<CanteenRow[]> {
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('[PhaseIt] fetchCanteens error:', error.message);
+    logCanteensError('fetchCanteens', error);
     throw error;
   }
 
@@ -170,7 +182,7 @@ export async function insertCanteen(input: InsertCanteenInput): Promise<CanteenR
     .single();
 
   if (error) {
-    console.error('[PhaseIt] insertCanteen error:', error.message);
+    logCanteensError('insertCanteen', error);
     throw error;
   }
 

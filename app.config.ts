@@ -8,6 +8,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'PhaseItApp',
   slug: 'PhaseItApp',
+  scheme: 'phaseitapp',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
@@ -45,6 +46,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     output: 'single',
   },
   plugins: [
+    'expo-router',
     [
       'expo-camera',
       {

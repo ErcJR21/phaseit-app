@@ -48,8 +48,9 @@ export const screens: ScreenSpec[] = [
   {
     route: '/onboarding',
     name: 'Onboarding',
-    status: 'not-started',
-    notes: 'First-run flow: “Log Meals in Seconds”, “Find Food Near You”, “Budget-Aware Picks”, CTA “Let’s Get Started”.',
+    status: 'built',
+    file: 'app/onboarding.tsx',
+    notes: 'Auth screen — student/parent tabs, create account & log in forms, social auth row, Supabase sign-up/sign-in.',
   },
   {
     route: '/dashboard',
@@ -76,8 +77,8 @@ export const screens: ScreenSpec[] = [
     route: '/barkada',
     name: 'Barkada',
     status: 'built',
-    file: 'screens/BarkadaScreen.js',
-    notes: 'EXP badge, level, Feed/Groups/Challenges/Leaderboard tabs, leaderboard banner, activity feed.',
+    file: 'app/barkada.tsx',
+    notes: 'EXP badge, level bar, Feed/Groups/Challenges/Leaderboard tabs, leaderboard banner, activity feed, group meals, challenges, podium.',
   },
   {
     route: '/history',
@@ -117,8 +118,9 @@ export const screens: ScreenSpec[] = [
   {
     route: '/meal-plan',
     name: 'Meal Plan',
-    status: 'not-started',
-    notes: 'Quick action — weekly planner. Coral Calendar icon.',
+    status: 'built',
+    file: 'app/meal-plan.tsx',
+    notes: 'Weekly day tabs, Breakfast/Lunch/Snack/Dinner slots, recipe picker modal, Supabase meal_plans + recipes persistence.',
   },
 ];
 

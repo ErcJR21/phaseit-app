@@ -32,6 +32,7 @@ export function MapSearchBar({
         <Pressable
           style={styles.clearButton}
           onPress={() => onChangeText('')}
+          accessibilityRole="button"
           accessibilityLabel="Clear search"
         >
           <X size={16} color={colors.muted} strokeWidth={2.2} />

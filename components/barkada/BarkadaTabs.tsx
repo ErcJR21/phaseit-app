@@ -1,18 +1,15 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { colors, shadows } from '../../theme/colors';
 import { layout, radii, spacing } from '../../theme/spacing';
-
-export type BarkadaTab = 'feed' | 'groups' | 'challenges' | 'leaderboard';
+import { fontWeights } from '../../theme/typography';
+import type { BarkadaTabKey } from './barkadaData';
 
 type BarkadaTabsProps = {
-  activeTab: BarkadaTab;
-  onTabChange: (tab: BarkadaTab) => void;
+  activeTab: BarkadaTabKey;
+  onTabChange: (tab: BarkadaTabKey) => void;
 };
 
-const TAB_ACTIVE_BG = '#F4B400';
-const TAB_TEXT = '#000000';
-const TAB_BORDER = '#000000';
-
-const tabs: { key: BarkadaTab; label: string }[] = [
+const tabs: { key: BarkadaTabKey; label: string }[] = [
   { key: 'feed', label: 'Feed' },
   { key: 'groups', label: 'Groups' },
   { key: 'challenges', label: 'Challenges' },
@@ -22,7 +19,11 @@ const tabs: { key: BarkadaTab; label: string }[] = [
 export function BarkadaTabs({ activeTab, onTabChange }: BarkadaTabsProps) {
   return (
     <View style={styles.container}>
-      <View style={styles.row}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.row}
+      >
         {tabs.map((tab) => {
           const active = activeTab === tab.key;
 
@@ -35,11 +36,13 @@ export function BarkadaTabs({ activeTab, onTabChange }: BarkadaTabsProps) {
               accessibilityState={{ selected: active }}
               accessibilityLabel={tab.label}
             >
-              <Text style={styles.label}>{tab.label}</Text>
+              <Text style={[styles.label, active ? styles.labelActive : styles.labelInactive]}>
+                {tab.label}
+              </Text>
             </Pressable>
           );
         })}
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -47,38 +50,37 @@ export function BarkadaTabs({ activeTab, onTabChange }: BarkadaTabsProps) {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: layout.screenPaddingX,
-    alignItems: 'center',
+    marginBottom: spacing.md,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: spacing.sm,
-    width: '100%',
+    paddingRight: spacing.sm,
   },
   pill: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 8,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 6,
     borderRadius: radii.pill,
-    minHeight: 36,
+    minHeight: 32,
+    justifyContent: 'center',
   },
   pillActive: {
-    backgroundColor: TAB_ACTIVE_BG,
-    borderWidth: 1,
-    borderColor: TAB_ACTIVE_BG,
+    backgroundColor: colors.gold,
   },
   pillInactive: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: TAB_BORDER,
+    backgroundColor: colors.white,
+    ...shadows.card,
+    shadowOpacity: 0.06,
   },
   label: {
     fontSize: 12,
-    fontWeight: '600',
-    color: TAB_TEXT,
-    textAlign: 'center',
+    fontWeight: fontWeights.semibold,
+  },
+  labelActive: {
+    color: colors.navy,
+  },
+  labelInactive: {
+    color: colors.muted,
   },
 });

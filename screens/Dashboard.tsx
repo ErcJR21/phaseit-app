@@ -30,6 +30,7 @@ export type DashboardProps = {
   onOpenHistory?: () => void;
   onOpenProfile?: () => void;
   onOpenJar?: () => void;
+  onOpenMealPlan?: () => void;
 };
 
 function getGreeting() {
@@ -48,6 +49,7 @@ export function Dashboard({
   onOpenHistory,
   onOpenProfile,
   onOpenJar,
+  onOpenMealPlan,
 }: DashboardProps) {
   const { macroStats, isReady, isLoading, resetDailyMacros } = useMacros();
 
@@ -132,6 +134,7 @@ export function Dashboard({
           onBarkada={onOpenBarkada}
           onFoodMap={onOpenFoodMap}
           onJar={onOpenJar}
+          onMealPlan={onOpenMealPlan}
         />
       </ScrollView>
     </SafeAreaView>

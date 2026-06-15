@@ -16,7 +16,8 @@ import {
 } from './data/dailyMacros';
 import { useMealLog } from './MealLog';
 import { Dashboard } from './screens/Dashboard';
-import { BarkadaScreen } from './screens/BarkadaScreen';
+import BarkadaScreen from './app/barkada';
+import MealPlanScreen from './app/meal-plan';
 import { JarScreen } from './screens/JarScreen';
 import MapScreen from './screens/MapScreen';
 import { MealHistoryScreen } from './screens/MealHistoryScreen';
@@ -53,6 +54,7 @@ function PhaseItApp() {
   const [showCamera, setShowCamera] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [showJar, setShowJar] = useState(false);
+  const [showMealPlan, setShowMealPlan] = useState(false);
   const [showMacroGoals, setShowMacroGoals] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('Lunch logged! Nice choice!');
@@ -127,6 +129,7 @@ function PhaseItApp() {
             onOpenHistory={() => setActiveTab('history')}
             onOpenProfile={() => setActiveTab('profile')}
             onOpenJar={() => setShowJar(true)}
+            onOpenMealPlan={() => setShowMealPlan(true)}
           />
         );
       case 'barkada':
@@ -161,7 +164,7 @@ function PhaseItApp() {
         />
       )}
 
-      {!showMap && !showJar && !pendingMeal && !showMacroGoals && (
+      {!showMap && !showJar && !showMealPlan && !pendingMeal && !showMacroGoals && (
         <BottomNav activeTab={activeTab} onTabPress={setActiveTab} />
       )}
 
@@ -212,6 +215,14 @@ function PhaseItApp() {
         onRequestClose={() => setShowJar(false)}
       >
         <JarScreen onClose={() => setShowJar(false)} />
+      </Modal>
+
+      <Modal
+        visible={showMealPlan}
+        animationType="slide"
+        onRequestClose={() => setShowMealPlan(false)}
+      >
+        <MealPlanScreen onClose={() => setShowMealPlan(false)} />
       </Modal>
     </Animated.View>
   );

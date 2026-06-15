@@ -113,11 +113,23 @@ export function AddCanteenModal({
         style={styles.backdrop}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <Pressable style={styles.scrim} onPress={handleClose} />
+        <View
+          style={styles.scrim}
+          accessibilityRole="none"
+          importantForAccessibility="no"
+          onStartShouldSetResponder={() => true}
+          onResponderRelease={handleClose}
+        />
         <View style={styles.sheet}>
           <View style={styles.header}>
             <Text style={styles.title}>Drop a Hidden Gem</Text>
-            <Pressable style={styles.closeButton} onPress={handleClose} disabled={submitting}>
+            <Pressable
+              style={styles.closeButton}
+              onPress={handleClose}
+              disabled={submitting}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+            >
               <X size={18} color={colors.navy} strokeWidth={2.2} />
             </Pressable>
           </View>

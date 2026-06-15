@@ -16,9 +16,10 @@ type QuickActionsProps = {
   onBarkada?: () => void;
   onFoodMap?: () => void;
   onJar?: () => void;
+  onMealPlan?: () => void;
 };
 
-export function QuickActions({ onLogMeal, onBarkada, onFoodMap, onJar }: QuickActionsProps) {
+export function QuickActions({ onLogMeal, onBarkada, onFoodMap, onJar, onMealPlan }: QuickActionsProps) {
   const actions: QuickAction[] = [
     {
       id: 'log-meal',
@@ -53,6 +54,7 @@ export function QuickActions({ onLogMeal, onBarkada, onFoodMap, onJar }: QuickAc
       label: 'Meal Plan',
       icon: <CalendarDays size={24} color={colors.coral} strokeWidth={2} />,
       iconBg: colors.coralTint10,
+      onPress: onMealPlan,
     },
   ];
 

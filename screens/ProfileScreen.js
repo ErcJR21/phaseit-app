@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LogoutButton } from '../components/LogoutButton';
 import { useExperience } from '../context/ExpContext';
 
 const RESTAURANTS_SAVED = 12;
@@ -17,7 +18,6 @@ const MENU_ITEMS = [
   { id: 'saved-locations', label: 'Saved Locations', icon: 'bookmark-outline' },
   { id: 'contributions', label: 'My Contributions', icon: 'chatbubble-ellipses-outline' },
   { id: 'settings', label: 'Settings', icon: 'settings-outline' },
-  { id: 'logout', label: 'Logout', icon: 'log-out-outline', destructive: true },
 ];
 
 function handleMenuPress(item, onOpenMacroGoals) {
@@ -100,24 +100,15 @@ export function ProfileScreen({ onOpenMacroGoals }) {
                 accessibilityRole="button"
                 accessibilityLabel={item.label}
               >
-                <Ionicons
-                  name={item.icon}
-                  size={20}
-                  color={item.destructive ? '#FF7A66' : '#0F1E3A'}
-                />
-                <Text
-                  style={[
-                    styles.menuItemText,
-                    item.destructive && styles.menuItemTextDestructive,
-                  ]}
-                >
-                  {item.label}
-                </Text>
+                <Ionicons name={item.icon} size={20} color="#0F1E3A" />
+                <Text style={styles.menuItemText}>{item.label}</Text>
                 <Ionicons name="chevron-forward" size={18} color="#8E8E93" />
               </TouchableOpacity>
               {index < MENU_ITEMS.length - 1 ? <View style={styles.menuDivider} /> : null}
             </View>
           ))}
+          <View style={styles.menuDivider} />
+          <LogoutButton variant="menu" />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -260,10 +251,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: '#0F1E3A',
-  },
-  menuItemTextDestructive: {
-    color: '#FF7A66',
-    fontWeight: '600',
   },
   menuDivider: {
     height: StyleSheet.hairlineWidth,

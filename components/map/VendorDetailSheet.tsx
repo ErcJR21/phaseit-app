@@ -47,11 +47,12 @@ export function VendorDetailSheet({ vendor, onLogMeal }: VendorDetailSheetProps)
 
   return (
     <View style={styles.sheet}>
-      <Pressable
-        style={styles.handleRow}
-        onPress={() => setExpanded((value) => !value)}
-        accessibilityLabel={expanded ? 'Collapse menu' : 'Expand menu'}
-      >
+          <Pressable
+            style={styles.handleRow}
+            onPress={() => setExpanded((value) => !value)}
+            accessibilityRole="button"
+            accessibilityLabel={expanded ? 'Collapse menu' : 'Expand menu'}
+          >
         <View style={styles.handle} />
         <ChevronUp
           size={16}
@@ -130,9 +131,9 @@ export function VendorDetailSheet({ vendor, onLogMeal }: VendorDetailSheetProps)
               <Text style={styles.menuPrice}>₱{item.price}</Text>
             </View>
           ))}
-          <Pressable style={styles.updatePrices}>
+          <View style={styles.updatePrices}>
             <Text style={styles.updatePricesText}>Update prices</Text>
-          </Pressable>
+          </View>
         </ScrollView>
       )}
 
@@ -146,7 +147,12 @@ export function VendorDetailSheet({ vendor, onLogMeal }: VendorDetailSheetProps)
           <MapPin size={18} color={colors.white} strokeWidth={2} />
           <Text style={styles.directionsText}>Get Directions</Text>
         </Pressable>
-        <Pressable style={styles.logButton} onPress={onLogMeal}>
+        <Pressable
+          style={styles.logButton}
+          onPress={onLogMeal}
+          accessibilityRole="button"
+          accessibilityLabel="Log meal with AI camera"
+        >
           <Camera size={18} color={colors.navy} strokeWidth={2} />
           <Text style={styles.logText}>Log with AI Cam</Text>
         </Pressable>
