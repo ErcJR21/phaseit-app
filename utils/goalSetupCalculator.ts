@@ -1,9 +1,19 @@
-import type { ActivityLevel, MacroGoalTargets, UserProfile } from './macroCalculator';
+import {
+  calculateGoalsFromProfile,
+  type ActivityLevel,
+  type Gender,
+  type MacroGoalTargets,
+  type UserProfile,
+} from './macroCalculator';
 
 export type GoalSetupActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active';
 export type GoalType = 'maintain' | 'lose' | 'gain';
 
 export type GoalSetupSelections = {
+  age: number;
+  gender: Gender;
+  weightKg: number;
+  heightCm: number;
   activity: GoalSetupActivityLevel;
   goalType: GoalType;
   budget: number;
@@ -11,6 +21,13 @@ export type GoalSetupSelections = {
   protein: number;
   carbs: number;
   fat: number;
+};
+
+export const DEFAULT_GOAL_SETUP_BODY = {
+  age: 20,
+  gender: 'female' as Gender,
+  weightKg: 60,
+  heightCm: 170,
 };
 
 export const GOAL_SETUP_ACTIVITY_OPTIONS: {
@@ -44,13 +61,6 @@ export const BUDGET_PRESETS = [
   { label: 'Big Spender', amount: 500, emoji: '💸' },
 ] as const;
 
-const BASE_CALORIES: Record<GoalSetupActivityLevel, number> = {
-  sedentary: 1800,
-  light: 2000,
-  moderate: 2200,
-  active: 2500,
-};
-
 const MACRO_SPLITS: Record<GoalType, { protein: number; carbs: number; fat: number }> = {
   lose: { protein: 0.35, carbs: 0.4, fat: 0.25 },
   maintain: { protein: 0.25, carbs: 0.5, fat: 0.25 },
@@ -60,6 +70,44 @@ const MACRO_SPLITS: Record<GoalType, { protein: number; carbs: number; fat: numb
 function mapActivityLevel(activity: GoalSetupActivityLevel): ActivityLevel {
   if (activity === 'active') return 'active';
   return activity;
+}
+
+export function parseBodyMetric(
+  value: string,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, Math.round(parsed)));
+}
+
+export function cmToFeetInches(cm: number): { feet: number; inches: number } {
+  const totalInches = cm / 2.54;
+  let feet = Math.floor(totalInches / 12);
+  let inches = Math.round(totalInches - feet * 12);
+
+  if (inches === 12) {
+    feet += 1;
+    inches = 0;
+  }
+
+  return { feet, inches };
+}
+
+export function feetInchesToCm(feet: number, inches: number): number {
+  return Math.round((feet * 12 + inches) * 2.54);
+}
+
+export function buildGoalSetupProfile(
+  body: Pick<UserProfile, 'weightKg' | 'heightCm' | 'age' | 'gender'>,
+  activity: GoalSetupActivityLevel,
+): UserProfile {
+  return {
+    ...body,
+    activityLevel: mapActivityLevel(activity),
+  };
 }
 
 export function calcMacrosFromCalories(
@@ -75,11 +123,12 @@ export function calcMacrosFromCalories(
 }
 
 export function calcRecommendedGoals(
-  activity: GoalSetupActivityLevel,
+  profile: UserProfile,
   goalType: GoalType,
 ): MacroGoalTargets {
+  const { tdee } = calculateGoalsFromProfile(profile);
   const calAdj = GOAL_TYPE_OPTIONS.find((option) => option.key === goalType)?.calAdj ?? 0;
-  const calories = BASE_CALORIES[activity] + calAdj;
+  const calories = Math.max(1200, tdee + calAdj);
   const macros = calcMacrosFromCalories(calories, goalType);
 
   return {
@@ -102,22 +151,26 @@ export function calcMacroPercentages(protein: number, carbs: number, fat: number
   };
 }
 
-export function profileFromGoalSetup(activity: GoalSetupActivityLevel): UserProfile {
-  return {
-    weightKg: 60,
-    heightCm: 170,
-    age: 20,
-    gender: 'female',
-    activityLevel: mapActivityLevel(activity),
-  };
+export function profileFromGoalSetup(selections: GoalSetupSelections): UserProfile {
+  return buildGoalSetupProfile(
+    {
+      weightKg: selections.weightKg,
+      heightCm: selections.heightCm,
+      age: selections.age,
+      gender: selections.gender,
+    },
+    selections.activity,
+  );
 }
 
 export function defaultGoalSetupSelections(): GoalSetupSelections {
   const activity: GoalSetupActivityLevel = 'light';
   const goalType: GoalType = 'maintain';
-  const goals = calcRecommendedGoals(activity, goalType);
+  const profile = buildGoalSetupProfile(DEFAULT_GOAL_SETUP_BODY, activity);
+  const goals = calcRecommendedGoals(profile, goalType);
 
   return {
+    ...DEFAULT_GOAL_SETUP_BODY,
     activity,
     goalType,
     budget: 300,

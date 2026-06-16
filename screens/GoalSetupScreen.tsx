@@ -1,11 +1,13 @@
 import { useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   LayoutChangeEvent,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,26 +29,98 @@ import { layout, radii, spacing } from '../theme/spacing';
 import { fontWeights } from '../theme/typography';
 import {
   BUDGET_PRESETS,
+  DEFAULT_GOAL_SETUP_BODY,
   GOAL_SETUP_ACTIVITY_OPTIONS,
   GOAL_TYPE_OPTIONS,
+  buildGoalSetupProfile,
   calcMacroPercentages,
   calcMacrosFromCalories,
   calcRecommendedGoals,
+  cmToFeetInches,
+  feetInchesToCm,
+  parseBodyMetric,
   type GoalSetupActivityLevel,
   type GoalSetupSelections,
   type GoalType,
 } from '../utils/goalSetupCalculator';
+import type { Gender } from '../utils/macroCalculator';
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 5;
 const BUDGET_MIN = 50;
 const BUDGET_MAX = 800;
 const BUDGET_STEP = 10;
+const DEFAULT_FEET_INCHES = cmToFeetInches(DEFAULT_GOAL_SETUP_BODY.heightCm);
 
 type GoalSetupScreenProps = {
   onComplete: (selections: GoalSetupSelections) => Promise<void>;
   onSkip: () => Promise<void>;
   isSubmitting?: boolean;
 };
+
+type HeightUnit = 'cm' | 'ft';
+
+type ProfileFieldProps = {
+  label: string;
+  value: string;
+  onChangeText: (value: string) => void;
+  suffix?: string;
+  keyboardType?: 'default' | 'numeric';
+  flex?: number;
+};
+
+function ProfileField({
+  label,
+  value,
+  onChangeText,
+  suffix,
+  keyboardType = 'numeric',
+  flex = 1,
+}: ProfileFieldProps) {
+  return (
+    <View style={[styles.profileField, flex ? { flex } : null]}>
+      <Text style={styles.profileFieldLabel}>{label}</Text>
+      <View style={styles.profileInputRow}>
+        <TextInput
+          style={styles.profileInput}
+          value={value}
+          onChangeText={onChangeText}
+          keyboardType={keyboardType}
+          placeholderTextColor={colors.muted}
+        />
+        {suffix ? <Text style={styles.profileInputSuffix}>{suffix}</Text> : null}
+      </View>
+    </View>
+  );
+}
+
+function UnitToggle({
+  value,
+  onChange,
+}: {
+  value: HeightUnit;
+  onChange: (unit: HeightUnit) => void;
+}) {
+  return (
+    <View style={styles.unitToggle}>
+      {(['cm', 'ft'] as HeightUnit[]).map((unit) => {
+        const active = value === unit;
+        return (
+          <Pressable
+            key={unit}
+            style={[styles.unitTogglePill, active && styles.unitTogglePillActive]}
+            onPress={() => onChange(unit)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+          >
+            <Text style={[styles.unitToggleLabel, active && styles.unitToggleLabelActive]}>
+              {unit}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
 
 function StepDots({ total, current }: { total: number; current: number }) {
   return (
@@ -252,18 +326,50 @@ function MacroDonut({
 
 export function GoalSetupScreen({ onComplete, onSkip, isSubmitting = false }: GoalSetupScreenProps) {
   const [step, setStep] = useState(0);
+  const [age, setAge] = useState(String(DEFAULT_GOAL_SETUP_BODY.age));
+  const [gender, setGender] = useState<Gender>(DEFAULT_GOAL_SETUP_BODY.gender);
+  const [weightKg, setWeightKg] = useState(String(DEFAULT_GOAL_SETUP_BODY.weightKg));
+  const [heightUnit, setHeightUnit] = useState<HeightUnit>('cm');
+  const [heightCm, setHeightCm] = useState(String(DEFAULT_GOAL_SETUP_BODY.heightCm));
+  const [heightFeet, setHeightFeet] = useState(String(DEFAULT_FEET_INCHES.feet));
+  const [heightInches, setHeightInches] = useState(String(DEFAULT_FEET_INCHES.inches));
   const [activity, setActivity] = useState<GoalSetupActivityLevel>('light');
   const [goalType, setGoalType] = useState<GoalType>('maintain');
   const [budget, setBudget] = useState(300);
 
-  const recommended = useMemo(() => calcRecommendedGoals(activity, goalType), [activity, goalType]);
+  const resolvedBody = useMemo(
+    () => ({
+      age: parseBodyMetric(age, DEFAULT_GOAL_SETUP_BODY.age, 13, 100),
+      gender,
+      weightKg: parseBodyMetric(weightKg, DEFAULT_GOAL_SETUP_BODY.weightKg, 30, 200),
+      heightCm:
+        heightUnit === 'cm'
+          ? parseBodyMetric(heightCm, DEFAULT_GOAL_SETUP_BODY.heightCm, 100, 250)
+          : feetInchesToCm(
+              parseBodyMetric(heightFeet, DEFAULT_FEET_INCHES.feet, 3, 8),
+              parseBodyMetric(heightInches, DEFAULT_FEET_INCHES.inches, 0, 11),
+            ),
+    }),
+    [age, gender, weightKg, heightUnit, heightCm, heightFeet, heightInches],
+  );
+
+  const setupProfile = useMemo(
+    () => buildGoalSetupProfile(resolvedBody, activity),
+    [resolvedBody, activity],
+  );
+
+  const recommended = useMemo(
+    () => calcRecommendedGoals(setupProfile, goalType),
+    [setupProfile, goalType],
+  );
   const [calories, setCalories] = useState(recommended.calories);
   const [protein, setProtein] = useState(recommended.protein);
   const [carbs, setCarbs] = useState(recommended.carbs);
   const [fat, setFat] = useState(recommended.fat);
 
   const applyRecommended = (nextActivity: GoalSetupActivityLevel, nextGoalType: GoalType) => {
-    const goals = calcRecommendedGoals(nextActivity, nextGoalType);
+    const profile = buildGoalSetupProfile(resolvedBody, nextActivity);
+    const goals = calcRecommendedGoals(profile, nextGoalType);
     setCalories(goals.calories);
     setProtein(goals.protein);
     setCarbs(goals.carbs);
@@ -285,13 +391,79 @@ export function GoalSetupScreen({ onComplete, onSkip, isSubmitting = false }: Go
   const activityOption = GOAL_SETUP_ACTIVITY_OPTIONS.find((option) => option.key === activity);
   const goalOption = GOAL_TYPE_OPTIONS.find((option) => option.key === goalType);
 
+  const handleHeightUnitChange = (nextUnit: HeightUnit) => {
+    if (nextUnit === heightUnit) return;
+
+    if (nextUnit === 'ft') {
+      const cm = parseBodyMetric(heightCm, DEFAULT_GOAL_SETUP_BODY.heightCm, 100, 250);
+      const { feet, inches } = cmToFeetInches(cm);
+      setHeightFeet(String(feet));
+      setHeightInches(String(inches));
+    } else {
+      const cm = feetInchesToCm(
+        parseBodyMetric(heightFeet, DEFAULT_FEET_INCHES.feet, 3, 8),
+        parseBodyMetric(heightInches, DEFAULT_FEET_INCHES.inches, 0, 11),
+      );
+      setHeightCm(String(cm));
+    }
+
+    setHeightUnit(nextUnit);
+  };
+
+  const validateProfileStep = () => {
+    const parsedAge = Number(age);
+    const parsedWeight = Number(weightKg);
+
+    if (!Number.isFinite(parsedAge) || parsedAge < 13 || parsedAge > 100) {
+      Alert.alert('Check your age', 'Enter an age between 13 and 100.');
+      return false;
+    }
+
+    if (!Number.isFinite(parsedWeight) || parsedWeight < 30 || parsedWeight > 200) {
+      Alert.alert('Check your weight', 'Enter a weight between 30 and 200 kg.');
+      return false;
+    }
+
+    if (heightUnit === 'cm') {
+      const parsedHeight = Number(heightCm);
+      if (!Number.isFinite(parsedHeight) || parsedHeight < 100 || parsedHeight > 250) {
+        Alert.alert('Check your height', 'Enter a height between 100 and 250 cm.');
+        return false;
+      }
+    } else {
+      const parsedFeet = Number(heightFeet);
+      const parsedInches = Number(heightInches);
+      if (
+        !Number.isFinite(parsedFeet) ||
+        parsedFeet < 3 ||
+        parsedFeet > 8 ||
+        !Number.isFinite(parsedInches) ||
+        parsedInches < 0 ||
+        parsedInches > 11
+      ) {
+        Alert.alert('Check your height', 'Enter a valid height in feet and inches.');
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   const handleNext = async () => {
+    if (step === 0 && !validateProfileStep()) {
+      return;
+    }
+
     if (step < TOTAL_STEPS - 1) {
+      if (step === 0) {
+        applyRecommended(activity, goalType);
+      }
       setStep((current) => current + 1);
       return;
     }
 
     await onComplete({
+      ...resolvedBody,
       activity,
       goalType,
       budget,
@@ -345,7 +517,91 @@ export function GoalSetupScreen({ onComplete, onSkip, isSubmitting = false }: Go
         {step === 0 ? (
           <View style={styles.stepBlock}>
             <View>
-              <Text style={styles.stepEyebrowCoral}>Welcome aboard 🎉</Text>
+              <Text style={styles.stepEyebrowCoral}>Step 1 — About you</Text>
+              <Text style={styles.stepTitle}>
+                {"Tell us about\n"}
+                <Text style={styles.stepTitleAccentCoral}>your body</Text>
+              </Text>
+              <Text style={styles.stepBody}>
+                We use this to estimate your daily calorie needs with the Mifflin-St Jeor equation.
+              </Text>
+            </View>
+
+            <View style={styles.profileCard}>
+              <ProfileField label="Age" value={age} onChangeText={setAge} suffix="years" />
+
+              <View style={styles.profileField}>
+                <Text style={styles.profileFieldLabel}>Sex</Text>
+                <View style={styles.sexRow}>
+                  {(['female', 'male'] as Gender[]).map((option) => {
+                    const active = gender === option;
+                    return (
+                      <Pressable
+                        key={option}
+                        style={[styles.sexPill, active && styles.sexPillActive]}
+                        onPress={() => setGender(option)}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: active }}
+                      >
+                        <Text style={[styles.sexPillLabel, active && styles.sexPillLabelActive]}>
+                          {option === 'female' ? 'Female' : 'Male'}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+
+              <ProfileField
+                label="Weight"
+                value={weightKg}
+                onChangeText={setWeightKg}
+                suffix="kg"
+              />
+
+              <View style={styles.profileField}>
+                <View style={styles.heightHeader}>
+                  <Text style={styles.profileFieldLabel}>Height</Text>
+                  <UnitToggle value={heightUnit} onChange={handleHeightUnitChange} />
+                </View>
+                {heightUnit === 'cm' ? (
+                  <View style={styles.profileInputRow}>
+                    <TextInput
+                      style={styles.profileInput}
+                      value={heightCm}
+                      onChangeText={setHeightCm}
+                      keyboardType="numeric"
+                      placeholderTextColor={colors.muted}
+                    />
+                    <Text style={styles.profileInputSuffix}>cm</Text>
+                  </View>
+                ) : (
+                  <View style={styles.heightFeetRow}>
+                    <ProfileField
+                      label="Feet"
+                      value={heightFeet}
+                      onChangeText={setHeightFeet}
+                      suffix="ft"
+                      flex={1}
+                    />
+                    <ProfileField
+                      label="Inches"
+                      value={heightInches}
+                      onChangeText={setHeightInches}
+                      suffix="in"
+                      flex={1}
+                    />
+                  </View>
+                )}
+              </View>
+            </View>
+          </View>
+        ) : null}
+
+        {step === 1 ? (
+          <View style={styles.stepBlock}>
+            <View>
+              <Text style={styles.stepEyebrowCoral}>Step 2 — Goals</Text>
               <Text style={styles.stepTitle}>
                 {"Let's set up your\n"}
                 <Text style={styles.stepTitleAccentCoral}>nutrition goals</Text>
@@ -422,10 +678,10 @@ export function GoalSetupScreen({ onComplete, onSkip, isSubmitting = false }: Go
           </View>
         ) : null}
 
-        {step === 1 ? (
+        {step === 2 ? (
           <View style={styles.stepBlock}>
             <View>
-              <Text style={styles.stepEyebrowGreen}>Step 2 — Budget</Text>
+              <Text style={styles.stepEyebrowGreen}>Step 3 — Budget</Text>
               <Text style={styles.stepTitle}>
                 How much do you{'\n'}
                 <Text style={styles.stepTitleAccentGreen}>spend on food daily?</Text>
@@ -480,10 +736,10 @@ export function GoalSetupScreen({ onComplete, onSkip, isSubmitting = false }: Go
           </View>
         ) : null}
 
-        {step === 2 ? (
+        {step === 3 ? (
           <View style={styles.stepBlock}>
             <View>
-              <Text style={styles.stepEyebrowGold}>Step 3 — Macros</Text>
+              <Text style={styles.stepEyebrowGold}>Step 4 — Macros</Text>
               <Text style={styles.stepTitle}>
                 Fine-tune your{'\n'}
                 <Text style={styles.stepTitleAccentGold}>daily targets</Text>
@@ -586,7 +842,7 @@ export function GoalSetupScreen({ onComplete, onSkip, isSubmitting = false }: Go
           </View>
         ) : null}
 
-        {step === 3 ? (
+        {step === 4 ? (
           <View style={styles.stepBlock}>
             <View>
               <Text style={styles.stepEyebrowGreen}>All set! 🎉</Text>
@@ -849,6 +1105,104 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginTop: spacing.sm,
     lineHeight: 21,
+  },
+  profileCard: {
+    gap: spacing.lg,
+    padding: spacing.lg,
+    borderRadius: radii.xl,
+    backgroundColor: colors.white,
+    ...shadows.card,
+  },
+  profileField: {
+    gap: spacing.sm,
+  },
+  profileFieldLabel: {
+    fontSize: 13,
+    color: colors.navy,
+    fontWeight: fontWeights.semibold,
+  },
+  profileInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+    backgroundColor: colors.background,
+    borderWidth: 1.5,
+    borderColor: colors.track,
+  },
+  profileInput: {
+    flex: 1,
+    fontSize: 16,
+    color: colors.navy,
+    fontWeight: fontWeights.semibold,
+    paddingVertical: spacing.xs,
+  },
+  profileInputSuffix: {
+    fontSize: 13,
+    color: colors.muted,
+    fontWeight: fontWeights.medium,
+  },
+  sexRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  sexPill: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    borderRadius: radii.md,
+    backgroundColor: colors.background,
+    borderWidth: 1.5,
+    borderColor: colors.track,
+  },
+  sexPillActive: {
+    backgroundColor: colors.coralTint10,
+    borderColor: colors.coral,
+  },
+  sexPillLabel: {
+    fontSize: 14,
+    color: colors.navy,
+    fontWeight: fontWeights.semibold,
+  },
+  sexPillLabelActive: {
+    color: colors.coral,
+    fontWeight: fontWeights.bold,
+  },
+  heightHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  heightFeetRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  unitToggle: {
+    flexDirection: 'row',
+    padding: 3,
+    borderRadius: radii.pill,
+    backgroundColor: colors.track,
+    gap: 2,
+  },
+  unitTogglePill: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    borderRadius: radii.pill,
+  },
+  unitTogglePillActive: {
+    backgroundColor: colors.white,
+    ...shadows.card,
+  },
+  unitToggleLabel: {
+    fontSize: 12,
+    color: colors.muted,
+    fontWeight: fontWeights.semibold,
+    textTransform: 'uppercase',
+  },
+  unitToggleLabelActive: {
+    color: colors.navy,
   },
   sectionLabel: {
     fontSize: 13,

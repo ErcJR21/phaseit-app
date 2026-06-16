@@ -79,7 +79,7 @@ export async function completeGoalSetup({
   saveGoals,
   refreshProfile,
 }: CompleteGoalSetupInput): Promise<void> {
-  const profile = profileFromGoalSetup(selections.activity);
+  const profile = profileFromGoalSetup(selections);
   const goals: MacroGoalTargets = {
     calories: selections.calories,
     protein: selections.protein,
